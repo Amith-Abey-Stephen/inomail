@@ -23,6 +23,44 @@ function AdminDashboard() {
   const [inviteRole, setInviteRole] = useState("User");
   const [attachment, setAttachment] = useState(null);
 
+  // Organization settings + SMTP config
+  const [orgSettings, setOrgSettings] = useState({
+    name: "InoMail Organization",
+    email: adminEmail,
+    address: "",
+    logo: null,
+    senderName: "InoMail",
+    replyTo: adminEmail,
+    apiKey: "",
+    darkMode: false,
+    notifications: true,
+    twoFA: false,
+  });
+
+  const [smtpConfig, setSmtpConfig] = useState({
+    host: "",
+    port: "587",
+    encryption: "TLS",
+    username: "",
+    password: "",
+  });
+
+  // Load saved settings on mount
+  useEffect(() => {
+    const savedOrg = localStorage.getItem("orgSettings");
+    const savedSmtp = localStorage.getItem("smtpConfig");
+    if (savedOrg) {
+      try {
+        setOrgSettings(JSON.parse(savedOrg));
+      } catch (e) {}
+    }
+    if (savedSmtp) {
+      try {
+        setSmtpConfig(JSON.parse(savedSmtp));
+      } catch (e) {}
+    }
+  }, []);
+
   useEffect(() => {
     if (role !== "admin") navigate("/login");
   }, [role, navigate]);
@@ -30,6 +68,33 @@ function AdminDashboard() {
   const logout = () => {
     localStorage.clear();
     navigate("/login");
+  };
+
+  // Settings helpers
+  const saveAllSettings = () => {
+    localStorage.setItem("orgSettings", JSON.stringify(orgSettings));
+    localStorage.setItem("smtpConfig", JSON.stringify(smtpConfig));
+    alert("💾 Settings saved successfully");
+  };
+
+  const testSMTP = () => {
+    if (!smtpConfig.host || !smtpConfig.username || !smtpConfig.password) {
+      alert("Please provide SMTP host, username and password to test connection.");
+      return;
+    }
+
+    // Simulated SMTP test (no real network call)
+    setTimeout(() => {
+      alert("🧪 SMTP connection successful (simulated)");
+    }, 500);
+  };
+
+  const regenerateApiKey = () => {
+    const newKey = Math.random().toString(36).slice(2, 18);
+    const updated = { ...orgSettings, apiKey: newKey };
+    setOrgSettings(updated);
+    localStorage.setItem("orgSettings", JSON.stringify(updated));
+    alert("🔑 API key regenerated");
   };
 
   // Excel Upload

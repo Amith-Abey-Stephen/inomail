@@ -1,6 +1,7 @@
-import { Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar";
+import { useEffect } from "react";
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
 import Toast from "./components/Toast";
+import { toast } from "./utils/toast";
 
 import Home from "./pages/Home";
 import Login from "./pages/Login";
@@ -13,6 +14,18 @@ import AdminDashboard from "./pages/AdminDashboard";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 
 function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const expiry = localStorage.getItem("sessionExpiry");
+    if (expiry && Date.now() > parseInt(expiry)) {
+      localStorage.clear();
+      toast.warn("Your session has expired (1 hour). Please login again.");
+      navigate("/login");
+    }
+  }, [location.pathname, navigate]);
+
   return (
     <>             
       <Toast />

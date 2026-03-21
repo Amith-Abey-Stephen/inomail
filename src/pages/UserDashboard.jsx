@@ -1,12 +1,25 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { toast } from "../utils/toast";
+import * as XLSX from "xlsx";
 
 function UserDashboard() {
   const navigate = useNavigate();
   const role = localStorage.getItem("role");
   const userEmail = localStorage.getItem("email");
-  const organization = localStorage.getItem("orgName") || "InoMail Organization";
+  
+  const savedOrgs = JSON.parse(localStorage.getItem("userOrgs")) || [localStorage.getItem("orgName") || "InoMail Organization"];
+  const [organizations, setOrganizations] = useState(savedOrgs);
+  const [organization, setOrganization] = useState(organizations[0]);
+
+  const [recipients, setRecipients] = useState([]);
+  const [emailForm, setEmailForm] = useState({ subject: "", message: "", template: "" });
+  const [attachment, setAttachment] = useState(null);
+
+  const createNewOrg = () => {
+    toast.info("Redirecting to create a new organization");
+    navigate("/register");
+  };
 
   const permissions = JSON.parse(localStorage.getItem("userPermissions")) || {
     canSendEmails: true,
@@ -38,27 +51,57 @@ function UserDashboard() {
     },
   ]);
 
-  const [newCampaign, setNewCampaign] = useState({ name: "", subject: "", content: "" });
+  const handleExcelUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
 
-  const createCampaign = () => {
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const workbook = XLSX.read(evt.target.result, { type: "binary" });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const data = XLSX.utils.sheet_to_json(sheet);
+      const emails = data.map((row) => row.email).filter(Boolean);
+      setRecipients(emails);
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const generateTemplate = () => {
+    const template = `
+      <h2>Hello,</h2>
+      <p>This is a professional email from InoMail Organization.</p>
+      <p>${emailForm.message}</p>
+      <br/>
+      <p>Best Regards,<br/>InoMail Team</p>
+    `;
+    setEmailForm({ ...emailForm, template });
+  };
+
+  const sendCampaign = () => {
     if (!permissions.canSendEmails) {
       toast.error("Email sending disabled by organization");
       return;
     }
-    if (!newCampaign.name || !newCampaign.subject || !newCampaign.content) {
-      toast.warn("All fields are required");
+    if (!emailForm.subject || recipients.length === 0) {
+      toast.warn("Subject and recipients are required");
       return;
     }
+
     setCampaigns([
       ...campaigns,
       {
-        ...newCampaign,
-        emails: Math.floor(Math.random() * 2000),
+        name: emailForm.subject,
+        subject: emailForm.subject,
+        content: emailForm.message,
+        emails: recipients.length,
         status: "Draft",
         date: new Date().toLocaleDateString(),
       },
     ]);
-    setNewCampaign({ name: "", subject: "", content: "" });
+
+    setRecipients([]);
+    setEmailForm({ subject: "", message: "", template: "" });
+    toast.success("Campaign simulated successfully!");
     setActiveTab("history");
   };
 
@@ -80,9 +123,20 @@ function UserDashboard() {
         <div className="p-6 border-b border-slate-800 flex items-center justify-between">
           <div className={`${collapsed ? 'hidden' : 'block'} flex-1`}>
             <h2 className="text-xl font-black dash-gradient cursor-pointer" onClick={() => navigate("/")}>InoMail</h2>
-            <p className="text-xs text-slate-500 font-medium truncate uppercase">{organization}</p>
+            <select 
+               className="bg-slate-800 text-xs text-slate-300 font-medium truncate w-full mt-2 p-1.5 rounded-lg border border-slate-700 outline-none cursor-pointer hover:border-sky-500/50 transition-colors shadow-inner"
+               value={organization}
+               onChange={(e) => {
+                 setOrganization(e.target.value);
+                 localStorage.setItem("orgName", e.target.value);
+                 toast.success("Switched to " + e.target.value);
+               }}
+            >
+               {organizations.map((org, i) => <option key={i} value={org}>{org}</option>)}
+            </select>
+            <button className="text-[10px] uppercase tracking-wider text-sky-400 font-bold hover:text-white transition-colors mt-2" onClick={createNewOrg}>+ New Organization</button>
           </div>
-          <button onClick={() => setCollapsed(!collapsed)} className="text-slate-400 hover:text-white">
+          <button onClick={() => setCollapsed(!collapsed)} className="text-slate-400 hover:text-white shrink-0 ml-2">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
           </button>
         </div>

@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Navbar from "../components/Navbar";
 import { toast } from "../utils/toast";
+import { setSessionExpiry } from "../utils/session";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 
 const decodeJwt = (token) => {
@@ -16,9 +17,9 @@ function RegisterContent() {
   const navigate = useNavigate();
 
   const [orgName, setOrgName] = useState("");
-  const [creatorName, setCreatorName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [creatorName, setCreatorName] = useState(localStorage.getItem("creatorName") || "");
+  const [email, setEmail] = useState(localStorage.getItem("email") || "");
+  const [phone, setPhone] = useState(localStorage.getItem("phone") || "");
   const [password, setPassword] = useState("");
   const [showPasswordConditions, setShowPasswordConditions] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -53,6 +54,7 @@ function RegisterContent() {
     localStorage.setItem("creatorName", creatorName);
     localStorage.setItem("email", email);
     localStorage.setItem("phone", phone);
+    setSessionExpiry();
     navigate("/subscription");
   };
 

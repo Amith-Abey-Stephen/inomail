@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Navbar from "../components/Navbar";
 import { toast } from "../utils/toast";
+import { setSessionExpiry } from "../utils/session";
 import { GoogleOAuthProvider, GoogleLogin } from "@react-oauth/google";
 
 const decodeJwt = (token) => {
@@ -34,12 +35,14 @@ function LoginContent() {
     if (email.toLowerCase() === "super@inomail.com" && password === "super123") {
       localStorage.setItem("role", "superadmin");
       localStorage.setItem("email", email);
+      setSessionExpiry();
       navigate("/superadmin");
       return;
     }
     if (email.toLowerCase() === "admin@inomail.com" && password === "admin123") {
       localStorage.setItem("role", "admin");
       localStorage.setItem("email", email);
+      setSessionExpiry();
       navigate("/admin-dashboard");
       return;
     }
@@ -49,6 +52,7 @@ function LoginContent() {
     }
     localStorage.setItem("role", "user");
     localStorage.setItem("email", email);
+    setSessionExpiry();
     navigate("/SubscriptionDashboard");
   };
 
@@ -72,6 +76,7 @@ function LoginContent() {
   const handleGoogleSuccess = (userData) => {
     localStorage.setItem("role", "user");
     localStorage.setItem("email", userData.email || "googleuser@gmail.com");
+    setSessionExpiry();
     toast.success(`Welcome back, ${userData.name || userData.email || 'User'}!`);
     navigate("/SubscriptionDashboard");
   };

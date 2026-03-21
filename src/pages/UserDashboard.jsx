@@ -1,13 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { toast } from "../utils/toast";
 
 function UserDashboard() {
   const navigate = useNavigate();
   const role = localStorage.getItem("role");
   const userEmail = localStorage.getItem("email");
-  const organization = localStorage.getItem("orgName") || "My Organization";
+  const organization = localStorage.getItem("orgName") || "InoMail Organization";
 
-  /* ================= PERMISSIONS (ORG CONTROL) ================= */
   const permissions = JSON.parse(localStorage.getItem("userPermissions")) || {
     canSendEmails: true,
     canViewHistory: true,
@@ -16,9 +16,8 @@ function UserDashboard() {
   };
 
   const [activeTab, setActiveTab] = useState("dashboard");
-  const [search, setSearch] = useState("");
-  const [preview, setPreview] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
+
   useEffect(() => {
     if (role !== "user") navigate("/login");
   }, [role, navigate]);
@@ -28,7 +27,6 @@ function UserDashboard() {
     navigate("/login");
   };
 
-  /* ================= CAMPAIGNS ================= */
   const [campaigns, setCampaigns] = useState([
     {
       name: "Welcome Campaign",
@@ -40,24 +38,17 @@ function UserDashboard() {
     },
   ]);
 
-  /* ================= CREATE CAMPAIGN ================= */
-  const [newCampaign, setNewCampaign] = useState({
-    name: "",
-    subject: "",
-    content: "",
-  });
+  const [newCampaign, setNewCampaign] = useState({ name: "", subject: "", content: "" });
 
   const createCampaign = () => {
     if (!permissions.canSendEmails) {
-      alert("🚫 Email sending disabled by organization");
+      toast.error("Email sending disabled by organization");
       return;
     }
-
     if (!newCampaign.name || !newCampaign.subject || !newCampaign.content) {
-      alert("All fields are required");
+      toast.warn("All fields are required");
       return;
     }
-
     setCampaigns([
       ...campaigns,
       {
@@ -67,712 +58,222 @@ function UserDashboard() {
         date: new Date().toLocaleDateString(),
       },
     ]);
-
     setNewCampaign({ name: "", subject: "", content: "" });
     setActiveTab("history");
   };
 
-  /* ================= TEMPLATES ================= */
   const templates = [
-    {
-      name: "Welcome Email",
-      content: "🎉 Welcome to our platform! We're happy to have you.",
-    },
-    {
-      name: "Promotion",
-      content: "🔥 Limited Offer! Get 50% discount today!",
-    },
-    {
-      name: "Newsletter",
-      content: "📰 Here are our latest updates and news.",
-    },
+    { name: "Welcome Email", content: "🎉 Welcome to our platform! We're happy to have you." },
+    { name: "Promotion", content: "🔥 Limited Offer! Get 50% discount today!" },
+    { name: "Newsletter", content: "📰 Here are our latest updates and news." },
   ];
 
-  /* ================= ASSETS ================= */
-  const [assets, setAssets] = useState([]);
-  const handleAssetUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    setAssets([...assets, file.name]);
-  };
+  const sidebarButtonClass = (tabId) => 
+    `flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all ${
+      activeTab === tabId ? "bg-sky-500 text-white font-bold shadow-lg shadow-sky-500/20" : "text-slate-400 hover:bg-slate-800 hover:text-white"
+    }`;
 
   return (
-    <div className="user-wrapper">
+    <div className="flex bg-slate-900 h-screen w-full overflow-hidden">
       {/* SIDEBAR */}
-<aside className={`user-sidebar ${collapsed ? "collapsed" : ""}`}>
-  
-  {/* TOP SECTION */}
-  <div className="sidebar-top">
-    <div className="logo-area">
-      <h2 className="logo">InoMail</h2>
-      {!collapsed && <p className="org">{organization}</p>}
-    </div>
-
-    <button
-      className="collapse-btn"
-      onClick={() => setCollapsed(!collapsed)}
-    >
-      {collapsed ? "➡" : "⬅"}
-    </button>
-  </div>
-
-  {/* MENU */}
-  <nav className="user-menu">
-    <button
-      className={activeTab === "dashboard" ? "active" : ""}
-      onClick={() => setActiveTab("dashboard")}
-    >
-      📊 {!collapsed && "Dashboard"}
-    </button>
-
-    {permissions.canSendEmails && (
-      <button
-        className={activeTab === "create" ? "active" : ""}
-        onClick={() => setActiveTab("create")}
-      >
-        ✉ {!collapsed && "Send Email"}
-      </button>
-    )}
-
-    {permissions.canViewHistory && (
-      <button
-        className={activeTab === "history" ? "active" : ""}
-        onClick={() => setActiveTab("history")}
-      >
-        📁 {!collapsed && "History"}
-      </button>
-    )}
-
-    {permissions.canUseTemplates && (
-      <button
-        className={activeTab === "templates" ? "active" : ""}
-        onClick={() => setActiveTab("templates")}
-      >
-        🧩 {!collapsed && "Templates"}
-      </button>
-    )}
-
-    {permissions.canAccessAssets && (
-      <button
-        className={activeTab === "assets" ? "active" : ""}
-        onClick={() => setActiveTab("assets")}
-      >
-        📦 {!collapsed && "Assets"}
-      </button>
-    )}
-  </nav>
-
-  {/* LOGOUT */}
-  <button className="logout-btn" onClick={logout}>
-    🔒 {!collapsed && "Logout"}
-  </button>
-</aside>
-
-      {/* MAIN */}
-      <main className="user-main">
-        {/* TOPBAR */}
-        <div className="user-topbar">
-          <h1>{activeTab.toUpperCase()}</h1>
-          <div className="user-profile">
-            <span>Team Member</span>
-            <strong>{userEmail}</strong>
+      <aside className={`bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col shrink-0 ${collapsed ? 'w-20' : 'w-64'}`}>
+        <div className="p-6 border-b border-slate-800 flex items-center justify-between">
+          <div className={`${collapsed ? 'hidden' : 'block'} flex-1`}>
+            <h2 className="text-xl font-black dash-gradient cursor-pointer" onClick={() => navigate("/")}>InoMail</h2>
+            <p className="text-xs text-slate-500 font-medium truncate uppercase">{organization}</p>
           </div>
-        </div>
-
-        {/* ================= ULTRA ATTRACTIVE DASHBOARD ================= */}
-{activeTab === "dashboard" && (
-  <div className="ultra-dashboard">
-
-    {/* ===== HERO HEADER ===== */}
-    <div className="dashboard-hero">
-      <div className="hero-left">
-        <h2>🚀 Team Member Dashboard</h2>
-        <p className="hero-sub">
-          Welcome back! Monitor campaigns, templates, and assets in real-time.
-        </p>
-
-        <div className="hero-badges">
-          <span className="badge success">Active</span>
-          <span className="badge info">Team Access</span>
-          <span className="badge glow">Live System</span>
-        </div>
-      </div>
-
-      <div className="hero-right">
-        <div className="user-glass-card">
-          <h4>👤 Logged in</h4>
-          <strong>{userEmail}</strong>
-          <p>{organization}</p>
-        </div>
-      </div>
-    </div>
-
-    {/* ===== PREMIUM KPI CARDS ===== */}
-    <div className="dashboard-grid premium-grid">
-
-      <div className="kpi-card blue">
-        <div className="kpi-icon">📊</div>
-        <div>
-          <h4>Total Campaigns</h4>
-          <p>{campaigns.length}</p>
-          <span className="kpi-sub">Created campaigns</span>
-        </div>
-      </div>
-
-      <div className="kpi-card green">
-        <div className="kpi-icon">📧</div>
-        <div>
-          <h4>Email Access</h4>
-          <p>
-            {permissions.canSendEmails ? "Allowed" : "Restricted"}
-          </p>
-          <span className="kpi-sub">Permission status</span>
-        </div>
-      </div>
-
-      <div className="kpi-card purple">
-        <div className="kpi-icon">🧩</div>
-        <div>
-          <h4>Templates</h4>
-          <p>{templates.length}</p>
-          <span className="kpi-sub">Available templates</span>
-        </div>
-      </div>
-
-      <div className="kpi-card orange">
-        <div className="kpi-icon">📦</div>
-        <div>
-          <h4>Assets Library</h4>
-          <p>{assets.length}</p>
-          <span className="kpi-sub">Uploaded files</span>
-        </div>
-      </div>
-    </div>
-
-    {/* ===== SYSTEM + ACTIVITY ROW ===== */}
-    <div className="dashboard-row">
-
-      {/* SYSTEM STATUS CARD */}
-      <div className="glass-card system-card">
-        <div className="card-header">
-          <h3>⚡ System Status</h3>
-          <span className="live-dot"></span>
-        </div>
-
-        <div className="status-grid">
-          <div className="status-box">
-            <strong>SMTP</strong>
-            <span className="status ok">Operational</span>
-          </div>
-
-          <div className="status-box">
-            <strong>Email Queue</strong>
-            <span className="status ok">Running</span>
-          </div>
-
-          <div className="status-box">
-            <strong>Templates</strong>
-            <span className="status ok">Loaded</span>
-          </div>
-
-          <div className="status-box">
-            <strong>Assets</strong>
-            <span className="status ok">Active</span>
-          </div>
-        </div>
-
-        <div className="usage-bar">
-          <div
-            className="usage-fill"
-            style={{ width: `${Math.min(campaigns.length * 10, 100)}%` }}
-          />
-        </div>
-        <small>Usage Activity Level</small>
-      </div>
-
-      {/* RECENT ACTIVITY TIMELINE */}
-      <div className="glass-card activity-card-pro">
-        <h3>🕒 Recent Activity</h3>
-
-        <div className="timeline">
-          <div className="timeline-item success">
-            <span className="dot"></span>
-            <div>
-              <p>Campaign created successfully</p>
-              <small>Just now</small>
-            </div>
-          </div>
-
-          <div className="timeline-item info">
-            <span className="dot"></span>
-            <div>
-              <p>{templates.length} email templates available</p>
-              <small>Today</small>
-            </div>
-          </div>
-
-          <div className="timeline-item warning">
-            <span className="dot"></span>
-            <div>
-              <p>{assets.length} assets in library</p>
-              <small>Live sync</small>
-            </div>
-          </div>
-
-          <div className="timeline-item success">
-            <span className="dot"></span>
-            <div>
-              <p>System running smoothly</p>
-              <small>All services operational</small>
-            </div>
-          </div>
-        </div>
-      </div>
-
-    </div>
-  </div>
-)}
-
-        {/* ================= ULTRA PREMIUM CREATE EMAIL ================= */}
-{activeTab === "create" && permissions.canSendEmails && (
-  <div className="create-campaign-pro">
-
-    {/* HEADER */}
-    <div className="create-hero">
-      <div>
-        <h2>🚀 Campaign Studio</h2>
-        <p>
-          Design, preview and launch professional email campaigns with smart tools
-        </p>
-
-        <div className="create-stats">
-          <div className="stat-chip">
-            📊 Campaigns: <strong>{campaigns.length}</strong>
-          </div>
-          <div className="stat-chip">
-            🧩 Templates: <strong>{templates.length}</strong>
-          </div>
-          <div className="stat-chip">
-            📦 Assets: <strong>{assets.length}</strong>
-          </div>
-        </div>
-      </div>
-
-      <div className="ai-status">
-        <span className="ai-badge">AI Optimizer</span>
-        <small>
-          Subject Strength:{" "}
-          {newCampaign.subject.length > 25 ? "🔥 Strong" : "⚠ Improve"}
-        </small>
-      </div>
-    </div>
-
-    {/* MAIN GRID */}
-    <div className="create-grid">
-
-      {/* LEFT: FORM BUILDER */}
-      <div className="glass-form-card">
-        <h3>✍ Email Composer</h3>
-
-        {/* CAMPAIGN NAME */}
-        <label>Campaign Name</label>
-        <input
-          className="input-pro"
-          placeholder="Eg: Summer Promotion Campaign"
-          value={newCampaign.name}
-          onChange={(e) =>
-            setNewCampaign({ ...newCampaign, name: e.target.value })
-          }
-        />
-
-        {/* SUBJECT */}
-        <label>Email Subject</label>
-        <input
-          className="input-pro"
-          placeholder="🔥 Write a high-converting subject line..."
-          value={newCampaign.subject}
-          onChange={(e) =>
-            setNewCampaign({ ...newCampaign, subject: e.target.value })
-          }
-        />
-
-        {/* SUBJECT PROGRESS */}
-        <div className="subject-bar">
-          <div
-            className="subject-fill"
-            style={{
-              width: `${Math.min(newCampaign.subject.length * 2, 100)}%`,
-            }}
-          />
-        </div>
-
-        {/* TEMPLATE QUICK BUTTONS */}
-        <label>Quick Templates</label>
-        <div className="template-quick">
-          <button
-            onClick={() =>
-              setNewCampaign({
-                ...newCampaign,
-                content: "👋 Welcome! Thank you for joining our platform.",
-              })
-            }
-          >
-            👋 Welcome
-          </button>
-
-          <button
-            onClick={() =>
-              setNewCampaign({
-                ...newCampaign,
-                content: "🔥 Limited Time Offer! Get 30% OFF today!",
-              })
-            }
-          >
-            🔥 Promotion
-          </button>
-
-          <button
-            onClick={() =>
-              setNewCampaign({
-                ...newCampaign,
-                content: "📰 Here are our latest updates and news.",
-              })
-            }
-          >
-            📰 Newsletter
+          <button onClick={() => setCollapsed(!collapsed)} className="text-slate-400 hover:text-white">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
           </button>
         </div>
 
-        {/* EMAIL CONTENT */}
-        <label>Email Content</label>
-        <textarea
-          rows="8"
-          className="textarea-pro"
-          placeholder="Write your email content or paste HTML template..."
-          value={newCampaign.content}
-          onChange={(e) =>
-            setNewCampaign({ ...newCampaign, content: e.target.value })
-          }
-        />
-
-        {/* ACTION BUTTONS */}
-        <div className="create-actions">
-          <button
-            className="secondary-btn"
-            onClick={() =>
-              setNewCampaign({ name: "", subject: "", content: "" })
-            }
-          >
-            🧹 Clear
+        <nav className="flex-1 p-4 flex flex-col gap-2 overflow-y-auto">
+          <button className={sidebarButtonClass("dashboard")} onClick={() => setActiveTab("dashboard")}>
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
+            {!collapsed && <span>Dashboard</span>}
           </button>
 
-          <button className="primary-btn glow-btn" onClick={createCampaign}>
-            🚀 Launch Campaign
+          {permissions.canSendEmails && (
+            <button className={sidebarButtonClass("create")} onClick={() => setActiveTab("create")}>
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+              {!collapsed && <span>Send Email</span>}
+            </button>
+          )}
+
+          {permissions.canViewHistory && (
+            <button className={sidebarButtonClass("history")} onClick={() => setActiveTab("history")}>
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              {!collapsed && <span>History</span>}
+            </button>
+          )}
+
+          {permissions.canUseTemplates && (
+            <button className={sidebarButtonClass("templates")} onClick={() => setActiveTab("templates")}>
+              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+              {!collapsed && <span>Templates</span>}
+            </button>
+          )}
+        </nav>
+
+        <div className="p-4 border-t border-slate-800">
+          <button className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors" onClick={logout}>
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            {!collapsed && <span>Logout</span>}
           </button>
         </div>
-      </div>
+      </aside>
 
-      {/* RIGHT: LIVE PREVIEW */}
-      <div className="preview-card">
-        <div className="preview-header">
-          <h3>👁 Live Preview</h3>
-          <span className="live-badge">LIVE</span>
-        </div>
-
-        <div className="email-preview">
-          <h4>
-            {newCampaign.subject || "Subject Preview"}
-          </h4>
-          <p>
-            {newCampaign.content ||
-              "Your email content will appear here in real-time preview."}
-          </p>
-        </div>
-
-        <div className="preview-stats">
+      {/* MAIN CONTENT */}
+      <main className="flex-1 flex flex-col overflow-hidden bg-slate-900/50">
+        <header className="bg-slate-900/80 backdrop-blur-lg border-b border-slate-800 p-6 flex flex-col md:flex-row justify-between md:items-center gap-4 z-10 sticky top-0">
           <div>
-            <strong>98%</strong>
-            <span>Deliverability</span>
+            <h1 className="text-2xl font-bold text-white uppercase tracking-wide">{activeTab}</h1>
+            <p className="text-sm text-slate-400">Welcome back, Team Member</p>
           </div>
-          <div>
-            <strong>Low</strong>
-            <span>Spam Score</span>
+          <div className="bg-slate-800 px-4 py-2 rounded-full border border-slate-700 text-sm font-medium text-slate-300">
+            {userEmail}
           </div>
-          <div>
-            <strong>AI</strong>
-            <span>Optimized</span>
-          </div>
-        </div>
-      </div>
+        </header>
 
-    </div>
-  </div>
-)}
+        <div className="flex-1 overflow-y-auto p-6 lg:p-10 relative">
+          {/* Background blobs */}
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-sky-500/5 blur-[120px] rounded-full point-events-none" />
 
-        {/* HISTORY */}
-        {activeTab === "history" && permissions.canViewHistory && (
-          <div className="content-card">
-            <h2>📁 Campaign History</h2>
+          {activeTab === "dashboard" && (
+            <div className="space-y-8 relative z-10">
+              <div className="grid lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2 glass-card bg-gradient-to-tr from-sky-500/10 to-transparent border-sky-500/20 shadow-xl p-8 rounded-3xl">
+                  <h2 className="text-2xl font-black text-white mb-2">Campaign Analytics</h2>
+                  <p className="text-slate-400 mb-8">Monitor your email delivery and engagement in real-time.</p>
+                  
+                  <div className="flex gap-12">
+                     <div>
+                       <span className="block text-sm text-slate-400 uppercase tracking-widest mb-1">Campaigns</span>
+                       <strong className="text-4xl font-black text-sky-400">{campaigns.length}</strong>
+                     </div>
+                     <div>
+                       <span className="block text-sm text-slate-400 uppercase tracking-widest mb-1">Templates</span>
+                       <strong className="text-4xl font-black text-sky-400">{templates.length}</strong>
+                     </div>
+                  </div>
+                </div>
 
-            <input
-              className="search-box"
-              placeholder="🔍 Search campaigns..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+                <div className="glass-card bg-slate-800 border-slate-700 flex flex-col items-center justify-center p-8 text-center rounded-3xl">
+                  <p className="text-slate-400 text-sm uppercase tracking-widest mb-4">System Status</p>
+                  <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mb-4">
+                     <div className="w-6 h-6 rounded-full bg-green-500 animate-pulse shadow-[0_0_20px_rgba(34,197,94,0.5)]" />
+                  </div>
+                  <strong className="text-lg text-white font-bold">Operational</strong>
+                </div>
+              </div>
 
-            <table className="campaign-table">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Subject</th>
-                  <th>Status</th>
-                  <th>Date</th>
-                  <th>Preview</th>
-                </tr>
-              </thead>
-              <tbody>
-                {campaigns
-                  .filter((c) =>
-                    c.name.toLowerCase().includes(search.toLowerCase())
-                  )
-                  .map((c, i) => (
-                    <tr key={i}>
-                      <td>{c.name}</td>
-                      <td>{c.subject}</td>
-                      <td>
-                        <span className={`status ${c.status.toLowerCase()}`}>
-                          {c.status}
-                        </span>
-                      </td>
-                      <td>{c.date}</td>
-                      <td>
-                        <button
-                          className="preview-btn"
-                          onClick={() => setPreview(c)}
-                        >
-                          👁 View
-                        </button>
-                      </td>
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="glass-card bg-slate-800 border-slate-700 p-6 rounded-2xl">
+                  <h4 className="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-2">Total Sent</h4>
+                  <p className="text-4xl font-black text-white mb-2">12.8k</p>
+                  <span className="text-xs text-green-400 font-semibold bg-green-500/10 px-2 py-1 rounded">+12% from last week</span>
+                </div>
+                <div className="glass-card bg-slate-800 border-slate-700 p-6 rounded-2xl">
+                  <h4 className="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-2">Open Rate</h4>
+                  <p className="text-4xl font-black text-white mb-2">94.2%</p>
+                  <span className="text-xs text-sky-400 font-semibold bg-sky-500/10 px-2 py-1 rounded">Industry High</span>
+                </div>
+                <div className="glass-card bg-slate-800 border-slate-700 p-6 rounded-2xl">
+                  <h4 className="text-slate-400 text-sm font-semibold uppercase tracking-wider mb-2">Active Templates</h4>
+                  <p className="text-4xl font-black text-white mb-2">{templates.length}</p>
+                  <span className="text-xs text-purple-400 font-semibold bg-purple-500/10 px-2 py-1 rounded">Ready to use</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "create" && permissions.canSendEmails && (
+            <div className="glass-card bg-slate-800 border-slate-700 max-w-4xl mx-auto rounded-3xl p-8 pt-10 relative z-10 shadow-2xl">
+              <h3 className="text-2xl font-bold text-white mb-8 border-b border-slate-700 pb-4">New Campaign</h3>
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-400 mb-2 uppercase tracking-wide">Campaign Name</label>
+                  <input
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3.5 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all outline-none shadow-inner"
+                    placeholder="Eg: Summer Sale 2026"
+                    value={newCampaign.name}
+                    onChange={(e) => setNewCampaign({ ...newCampaign, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-400 mb-2 uppercase tracking-wide">Subject Line</label>
+                  <input
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3.5 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all outline-none shadow-inner"
+                    placeholder="Enter a catchy subject"
+                    value={newCampaign.subject}
+                    onChange={(e) => setNewCampaign({ ...newCampaign, subject: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-400 mb-2 uppercase tracking-wide">Content</label>
+                  <textarea
+                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3.5 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all outline-none shadow-inner min-h-[200px]"
+                    placeholder="Write your email body..."
+                    value={newCampaign.content}
+                    onChange={(e) => setNewCampaign({ ...newCampaign, content: e.target.value })}
+                  />
+                </div>
+                <button className="btn-primary w-full py-4 text-lg mt-4 shadow-sky-500/20" onClick={createCampaign}>
+                  Launch Campaign
+                </button>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "history" && (
+            <div className="glass-card bg-slate-800 border-slate-700 rounded-3xl p-8 relative z-10 shadow-2xl overflow-hidden">
+              <h3 className="text-2xl font-bold text-white mb-8">Campaign History</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-slate-700 text-slate-400 text-sm uppercase tracking-wider">
+                      <th className="pb-4 font-semibold px-4">Campaign Name</th>
+                      <th className="pb-4 font-semibold px-4">Status</th>
+                      <th className="pb-4 font-semibold px-4">Target</th>
+                      <th className="pb-4 font-semibold px-4 text-right">Date</th>
                     </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* TEMPLATES */}
-        {activeTab === "templates" && permissions.canUseTemplates && (
-          <div className="template-grid">
-            {templates.map((t, i) => (
-              <div key={i} className="template-card">
-                <h4>{t.name}</h4>
-                <p>{t.content}</p>
-                <button
-                  className="primary-btn"
-                  onClick={() =>
-                    setNewCampaign({ ...newCampaign, content: t.content })
-                  }
-                >
-                  Use Template
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-       {/* ================= PREMIUM ASSETS LIBRARY ================= */}
-{activeTab === "assets" && permissions.canAccessAssets && (
-  <div className="assets-pro-wrapper">
-
-    {/* HEADER */}
-    <div className="assets-header">
-      <div>
-        <h2>📦 Assets Library</h2>
-        <p>Manage images, documents, and campaign files in one place</p>
-      </div>
-
-      <div className="assets-stats">
-        <div className="asset-stat-card">
-          <span>Total Files</span>
-          <strong>{assets.length}</strong>
-        </div>
-        <div className="asset-stat-card">
-          <span>Storage Used</span>
-          <strong>{(assets.length * 2).toFixed(1)} MB</strong>
-        </div>
-      </div>
-    </div>
-
-    {/* TOOLBAR */}
-    <div className="assets-toolbar">
-      <input
-        className="asset-search"
-        placeholder="🔍 Search assets..."
-        onChange={(e) => setAssetSearch?.(e.target.value)}
-      />
-
-      <label className="upload-btn">
-        ⬆ Upload Asset
-        <input type="file" hidden onChange={handleAssetUpload} />
-      </label>
-    </div>
-
-    {/* DRAG & DROP UPLOAD BOX */}
-    <div className="upload-dropzone">
-      <input type="file" onChange={handleAssetUpload} />
-      <div className="drop-content">
-        <div className="upload-icon">📂</div>
-        <h3>Drag & Drop Files Here</h3>
-        <p>Supports Images, PDF, CSV, ZIP (Max 10MB)</p>
-      </div>
-    </div>
-
-    {/* ASSETS GRID */}
-    <div className="assets-grid">
-      {assets.length === 0 ? (
-        <div className="empty-assets">
-          <div className="empty-icon">📦</div>
-          <h3>No Assets Uploaded</h3>
-          <p>Upload files to use them in email campaigns and templates.</p>
-        </div>
-      ) : (
-        assets.map((a, i) => {
-          const ext = a.split(".").pop().toLowerCase();
-
-          const getIcon = () => {
-            if (["png", "jpg", "jpeg", "gif"].includes(ext)) return "🖼";
-            if (["pdf"].includes(ext)) return "📄";
-            if (["csv", "xlsx"].includes(ext)) return "📊";
-            if (["zip"].includes(ext)) return "🗜";
-            return "📁";
-          };
-
-          return (
-            <div key={i} className="asset-card">
-              <div className="asset-icon">{getIcon()}</div>
-
-              <div className="asset-info">
-                <h4>{a}</h4>
-                <span className="asset-meta">
-                  {ext.toUpperCase()} • {(Math.random() * 5 + 1).toFixed(1)} MB
-                </span>
-              </div>
-
-              <div className="asset-actions">
-                <button
-                  className="asset-btn view"
-                  onClick={() => alert(`Previewing: ${a}`)}
-                >
-                  👁
-                </button>
-
-                <button
-                  className="asset-btn copy"
-                  onClick={() => navigator.clipboard.writeText(a)}
-                >
-                  📋
-                </button>
-
-                <button
-                  className="asset-btn delete"
-                  onClick={() =>
-                    setAssets(assets.filter((_, index) => index !== i))
-                  }
-                >
-                  🗑
-                </button>
+                  </thead>
+                  <tbody className="text-slate-300">
+                    {campaigns.map((c, i) => (
+                      <tr key={i} className="border-b border-slate-700/50 hover:bg-slate-700/20 transition-colors">
+                        <td className="py-4 px-4 font-medium text-white">{c.name}</td>
+                        <td className="py-4 px-4">
+                          <span className={`px-3 py-1 text-xs font-bold uppercase rounded-full tracking-wide ${c.status === 'Sent' ? 'bg-green-500/10 text-green-400 border border-green-500/20' : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'}`}>
+                            {c.status}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 text-slate-400">{c.emails} recipients</td>
+                        <td className="py-4 px-4 text-right text-slate-400">{c.date}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </div>
-          );
-        })
-      )}
-    </div>
-  </div>
-)}
+          )}
 
-       {/* ================= ULTRA ATTRACTIVE EMAIL PREVIEW MODAL ================= */}
-{preview && (
-  <div className="preview-modal-backdrop">
-    <div className="preview-modal-container">
-
-      {/* TOP HEADER */}
-      <div className="preview-modal-header">
-        <div className="preview-header-left">
-          <div className="preview-icon">📧</div>
-          <div>
-            <h3 className="preview-title">{preview.name}</h3>
-            <span className="preview-sub">Campaign Email Preview</span>
-          </div>
+          {activeTab === "templates" && (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
+              {templates.map((t, i) => (
+                <div key={i} className="glass-card bg-slate-800 border-slate-700 flex flex-col p-6 rounded-2xl hover:-translate-y-1 hover:border-sky-500/30 transition-all duration-300 shadow-xl">
+                  <h4 className="text-lg font-bold text-white mb-3 text-sky-400">{t.name}</h4>
+                  <p className="text-sm text-slate-400 mb-6 flex-1 bg-slate-900 border border-slate-700 p-4 rounded-xl">{t.content}</p>
+                  <button 
+                    className="btn-outline w-full py-2.5 text-sm" 
+                    onClick={() => { setNewCampaign({ ...newCampaign, content: t.content }); setActiveTab("create"); }}
+                  >
+                    Use Template
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-
-        <button
-          className="modal-close-btn"
-          onClick={() => setPreview(null)}
-        >
-          ✕
-        </button>
-      </div>
-
-      {/* EMAIL META INFO */}
-      <div className="preview-meta-bar">
-        <div className="meta-item">
-          <span>From</span>
-          <strong>InoMail Team &lt;no-reply@inomail.com&gt;</strong>
-        </div>
-
-        <div className="meta-item">
-          <span>To</span>
-          <strong>Recipients List</strong>
-        </div>
-
-        <div className="meta-item">
-          <span>Subject</span>
-          <strong>{preview.subject}</strong>
-        </div>
-      </div>
-
-      {/* EMAIL BODY PREVIEW */}
-      <div className="preview-email-body">
-        <div className="email-card">
-          <div className="email-header">
-            <h4>{preview.subject}</h4>
-            <span className="email-badge">Live Preview</span>
-          </div>
-
-          <div className="email-content">
-            {preview.content ? (
-              <p>{preview.content}</p>
-            ) : (
-              <span className="empty-text">
-                No email content available
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* ACTION FOOTER */}
-      <div className="preview-modal-footer">
-        <button
-          className="secondary-btn"
-          onClick={() => setPreview(null)}
-        >
-          Cancel
-        </button>
-
-        <button
-          className="primary-btn"
-          onClick={() => {
-            alert(`📧 Campaign "${preview.name}" Resent (Demo)`);
-          }}
-        >
-          🚀 Resend Campaign
-        </button>
-      </div>
-    </div>
-  </div>
-)}
       </main>
     </div>
   );

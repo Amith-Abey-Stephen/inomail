@@ -5,10 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 
 import App from "./App";
 
-// ✅ Bootstrap CSS (GLOBAL)
-import "bootstrap/dist/css/bootstrap.min.css";
-
-// Your custom CSS
+// Your Tailwind CSS
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(

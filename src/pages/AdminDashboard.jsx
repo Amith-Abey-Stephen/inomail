@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { toast } from "../utils/toast";
 import * as XLSX from "xlsx";
 
 function AdminDashboard() {
@@ -74,18 +75,18 @@ function AdminDashboard() {
   const saveAllSettings = () => {
     localStorage.setItem("orgSettings", JSON.stringify(orgSettings));
     localStorage.setItem("smtpConfig", JSON.stringify(smtpConfig));
-    alert("💾 Settings saved successfully");
+    toast.success("Settings saved successfully");
   };
 
   const testSMTP = () => {
     if (!smtpConfig.host || !smtpConfig.username || !smtpConfig.password) {
-      alert("Please provide SMTP host, username and password to test connection.");
+      toast.warn("Please provide SMTP host, username and password to test connection.");
       return;
     }
 
     // Simulated SMTP test (no real network call)
     setTimeout(() => {
-      alert("🧪 SMTP connection successful (simulated)");
+      toast.success("SMTP connection successful (simulated)");
     }, 500);
   };
 
@@ -94,7 +95,7 @@ function AdminDashboard() {
     const updated = { ...orgSettings, apiKey: newKey };
     setOrgSettings(updated);
     localStorage.setItem("orgSettings", JSON.stringify(updated));
-    alert("🔑 API key regenerated");
+    toast.success("API key regenerated");
   };
 
   // Excel Upload
@@ -150,37 +151,57 @@ function AdminDashboard() {
   };
 
   return (
-    <div className="admin-layout">
-      {/* SIDEBAR */}
-      <aside className="admin-sidebar">
-        <div className="sidebar-header">
-          <h2 className="admin-logo">InoMail</h2>
-          <p>Organization Dashboard</p>
+    <div className="flex bg-slate-900 h-screen w-full overflow-hidden">
+      <aside className="bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col w-64 shrink-0">
+        <div className="p-6 border-b border-slate-800 flex flex-col">
+          <h2 className="text-2xl font-black dash-gradient cursor-pointer" onClick={() => navigate("/")} >InoMail</h2>
+          <p className="text-xs text-slate-500 font-medium truncate uppercase mt-1">{orgSettings.name}</p>
         </div>
 
-        <nav className="admin-menu">
-          <button onClick={() => setActiveTab("dashboard")}>📊 Dashboard</button>
-          <button onClick={() => setActiveTab("send")}>✉ Send Email</button>
-          <button onClick={() => setActiveTab("history")}>📬 History</button>
-          <button onClick={() => setActiveTab("members")}>👥 Members</button>
-          <button onClick={() => setActiveTab("settings")}>⚙ Settings</button>
-          <button className="logout-btn" onClick={logout}>🔒 Logout</button>
+        <nav className="flex-1 p-4 flex flex-col gap-2 overflow-y-auto">
+          <button className={activeTab === "dashboard" ? "active" : ""} onClick={() => setActiveTab("dashboard")}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M4 5a1 1 0 011-1h4a1 1 0 011 1v5a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v2a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-4zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"/></svg>
+            Dashboard
+          </button>
+          <button className={activeTab === "send" ? "active" : ""} onClick={() => setActiveTab("send")}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+            Send Email
+          </button>
+          <button className={activeTab === "history" ? "active" : ""} onClick={() => setActiveTab("history")}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            History
+          </button>
+          <button className={activeTab === "members" ? "active" : ""} onClick={() => setActiveTab("members")}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>
+            Members
+          </button>
+          <button className={activeTab === "settings" ? "active" : ""} onClick={() => setActiveTab("settings")}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            Settings
+          </button>
+
+          <button className="flex items-center gap-3 w-full px-4 py-3 rounded-xl text-red-400 hover:bg-red-500/10 transition-colors mt-auto" onClick={logout}>
+            <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Logout
+          </button>
         </nav>
       </aside>
 
-      {/* MAIN */}
-      <main className="admin-main">
-        <header className="admin-topbar">
-          <h1>{activeTab.toUpperCase()}</h1>
+      <main className="flex-1 flex flex-col overflow-hidden bg-slate-900/50 relative">
+        <header className="bg-slate-900/80 backdrop-blur-lg border-b border-slate-800 p-6 flex flex-col md:flex-row justify-between md:items-center gap-4 z-10 sticky top-0">
+          <div>
+            <h1 className="dash-gradient">{activeTab.toUpperCase()}</h1>
+            <p >Administrative Control Panel</p>
+          </div>
           <div className="admin-user">
-            <span>Admin</span>
-            <strong>{adminEmail}</strong>
+            {adminEmail}
           </div>
         </header>
 
+
       {/* ================= ULTRA PREMIUM DASHBOARD ================= */}
 {activeTab === "dashboard" && (
-  <div className="dashboard-premium">
+  <div className="p-6 lg:p-10 space-y-8 overflow-y-auto w-full">
 
     {/* ===== HERO ANALYTICS HEADER ===== */}
     <div className="dashboard-hero">
@@ -225,7 +246,7 @@ function AdminDashboard() {
         <h3>{campaigns.length}</h3>
         <p>Total Campaigns</p>
         <div className="stat-bar">
-          <div className="stat-fill" style={{ width: "70%" }}></div>
+          <div className="stat-fill" ></div>
         </div>
       </div>
 
@@ -252,7 +273,7 @@ function AdminDashboard() {
         <h3>{teamMembers.length}</h3>
         <p>Team Members</p>
         <div className="stat-bar">
-          <div className="stat-fill" style={{ width: "55%" }}></div>
+          <div className="stat-fill" ></div>
         </div>
       </div>
 
@@ -264,7 +285,7 @@ function AdminDashboard() {
         <h3>99.9%</h3>
         <p>Delivery Success Rate</p>
         <div className="stat-bar">
-          <div className="stat-fill" style={{ width: "95%" }}></div>
+          <div className="stat-fill" ></div>
         </div>
       </div>
     </div>
@@ -360,19 +381,19 @@ function AdminDashboard() {
         <p>Design, personalize, test and launch enterprise email campaigns</p>
 
         <div className="builder-kpis">
-          <div className="kpi-card">
+          <div className="glass-card bg-slate-800 border-slate-700 p-6 flex flex-col">
             <span>Recipients</span>
             <strong>{recipients.length}</strong>
           </div>
 
-          <div className="kpi-card">
+          <div className="glass-card bg-slate-800 border-slate-700 p-6 flex flex-col">
             <span>Subject Score</span>
             <strong>
               {emailForm.subject.length > 25 ? "🔥 Excellent" : "⚠ Improve"}
             </strong>
           </div>
 
-          <div className="kpi-card">
+          <div className="glass-card bg-slate-800 border-slate-700 p-6 flex flex-col">
             <span>Spam Risk</span>
             <strong>
               {emailForm.message.toLowerCase().includes("free")
@@ -405,7 +426,7 @@ function AdminDashboard() {
 
         <button
           className="btn-test"
-          onClick={() => alert("🧪 Test Email Sent Successfully (Simulation)")}
+          onClick={() => toast.success("Test Email Sent Successfully (Simulation)")}
         >
           🧪 Test Email
         </button>
@@ -715,17 +736,17 @@ function AdminDashboard() {
       <div className="table-scroll">
         <table className="premium-table">
           <thead>
-            <tr>
-              <th>Campaign</th>
-              <th>Recipients</th>
-              <th>Status</th>
-              <th>Performance</th>
-              <th>Date</th>
-              <th>Actions</th>
+            <tr className="border-b border-slate-700 text-slate-400 text-sm uppercase tracking-wider">
+              <th className="pb-4 font-semibold px-4">Campaign</th>
+              <th className="pb-4 font-semibold px-4">Recipients</th>
+              <th className="pb-4 font-semibold px-4">Status</th>
+              <th className="pb-4 font-semibold px-4">Performance</th>
+              <th className="pb-4 font-semibold px-4">Date</th>
+              <th className="pb-4 font-semibold px-4">Actions</th>
             </tr>
           </thead>
 
-          <tbody>
+          <tbody className="text-slate-300">
             {campaigns
               .filter((c) =>
                 c.subject.toLowerCase().includes(search.toLowerCase())
@@ -735,7 +756,7 @@ function AdminDashboard() {
 
                 return (
                   <tr key={i} className="premium-row">
-                    <td>
+                    <td className="py-4 px-4">
                       <div className="campaign-cell-premium">
                         <div className="campaign-avatar-glow">
                           {c.subject.charAt(0).toUpperCase()}
@@ -747,19 +768,19 @@ function AdminDashboard() {
                       </div>
                     </td>
 
-                    <td>
+                    <td className="py-4 px-4">
                       <span className="recipient-pill">
                         👥 {c.count}
                       </span>
                     </td>
 
-                    <td>
+                    <td className="py-4 px-4">
                       <span className="status-glow sent">
                         {c.status}
                       </span>
                     </td>
 
-                    <td>
+                    <td className="py-4 px-4">
                       <div className="progress-bar-premium">
                         <div
                           className="progress-fill-premium"
@@ -769,9 +790,9 @@ function AdminDashboard() {
                       </div>
                     </td>
 
-                    <td>{c.date}</td>
+                    <td className="py-4 px-4">{c.date}</td>
 
-                    <td>
+                    <td className="py-4 px-4">
                       <div className="action-buttons-premium">
                         <button className="icon-btn view">👁</button>
                         <button className="icon-btn edit">✏</button>
@@ -966,7 +987,7 @@ function AdminDashboard() {
               <div className="member-actions-ultra">
                 <button
                   className="action-btn view"
-                  onClick={() => alert(`Viewing ${member.email}`)}
+                  onClick={() => toast.success(`Viewing ${member.email}`)}
                 >
                   👁
                 </button>
@@ -1030,7 +1051,7 @@ function AdminDashboard() {
           onClick={() => {
             localStorage.removeItem("orgSettings");
             localStorage.removeItem("smtpConfig");
-            alert("♻ Settings Reset Successfully");
+            toast.success("Settings Reset Successfully");
             window.location.reload();
           }}
         >

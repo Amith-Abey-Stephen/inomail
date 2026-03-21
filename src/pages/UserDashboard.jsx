@@ -16,9 +16,26 @@ function UserDashboard() {
   const [emailForm, setEmailForm] = useState({ subject: "", message: "", template: "" });
   const [attachment, setAttachment] = useState(null);
 
-  const createNewOrg = () => {
-    toast.info("Redirecting to create a new organization");
-    navigate("/register");
+  const [showOrgDropdown, setShowOrgDropdown] = useState(false);
+  const [showNewOrgModal, setShowNewOrgModal] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
+
+  const handleCreateOrg = () => {
+    if (!newOrgName.trim()) return;
+    setOrganizations([...organizations, newOrgName]);
+    setOrganization(newOrgName);
+    localStorage.setItem("orgName", newOrgName);
+    setNewOrgName("");
+    setShowNewOrgModal(false);
+    setShowOrgDropdown(false);
+    toast.success(`Organization ${newOrgName} created!`);
+  };
+
+  const handleSwitchOrg = (orgName) => {
+    setOrganization(orgName);
+    localStorage.setItem("orgName", orgName);
+    setShowOrgDropdown(false);
+    toast.success(`Switched to ${orgName}`);
   };
 
   const permissions = JSON.parse(localStorage.getItem("userPermissions")) || {
@@ -105,11 +122,25 @@ function UserDashboard() {
     setActiveTab("history");
   };
 
-  const templates = [
-    { name: "Welcome Email", content: "🎉 Welcome to our platform! We're happy to have you." },
-    { name: "Promotion", content: "🔥 Limited Offer! Get 50% discount today!" },
-    { name: "Newsletter", content: "📰 Here are our latest updates and news." },
+  const defaultTemplates = [
+    { name: "Welcome Email", content: "<h2>👋 Welcome!</h2><p>Happy to have you here!</p>" },
+    { name: "Promotion", content: "<h2>🔥 Limited Offer!</h2><p>Get 50% discount today!</p>" },
+    { name: "Newsletter", content: "<h2>📰 Newsletter</h2><p>Here are our latest updates.</p>" },
   ];
+
+  const [templates, setTemplates] = useState(() => {
+    const drafts = JSON.parse(localStorage.getItem("sharedDrafts")) || [];
+    return [...defaultTemplates, ...drafts];
+  });
+
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const drafts = JSON.parse(localStorage.getItem("sharedDrafts")) || [];
+      setTemplates([...defaultTemplates, ...drafts]);
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   const sidebarButtonClass = (tabId) => 
     `flex items-center gap-3 w-full px-4 py-3 rounded-xl transition-all ${
@@ -121,20 +152,37 @@ function UserDashboard() {
       {/* SIDEBAR */}
       <aside className={`bg-slate-900 border-r border-slate-800 transition-all duration-300 flex flex-col shrink-0 ${collapsed ? 'w-20' : 'w-64'}`}>
         <div className="p-6 border-b border-slate-800 flex items-center justify-between">
-          <div className={`${collapsed ? 'hidden' : 'block'} flex-1`}>
-            <h2 className="text-xl font-black dash-gradient cursor-pointer" onClick={() => navigate("/")}>InoMail</h2>
-            <select 
-               className="bg-slate-800 text-xs text-slate-300 font-medium truncate w-full mt-2 p-1.5 rounded-lg border border-slate-700 outline-none cursor-pointer hover:border-sky-500/50 transition-colors shadow-inner"
-               value={organization}
-               onChange={(e) => {
-                 setOrganization(e.target.value);
-                 localStorage.setItem("orgName", e.target.value);
-                 toast.success("Switched to " + e.target.value);
-               }}
+          <div className={`${collapsed ? 'hidden' : 'block'} flex-1 relative`}>
+            <h2 className="text-xl font-black dash-gradient cursor-pointer pl-1" onClick={() => navigate("/")} >InoMail</h2>
+            <div 
+              className="mt-3 flex items-center justify-between bg-slate-800/50 hover:bg-slate-800 border border-slate-700/50 rounded-lg px-3 py-2.5 cursor-pointer transition w-full"
+              onClick={() => setShowOrgDropdown(!showOrgDropdown)}
             >
-               {organizations.map((org, i) => <option key={i} value={org}>{org}</option>)}
-            </select>
-            <button className="text-[10px] uppercase tracking-wider text-sky-400 font-bold hover:text-white transition-colors mt-2" onClick={createNewOrg}>+ New Organization</button>
+              <p className="text-xs text-slate-300 font-medium truncate uppercase">{organization}</p>
+              <span className="text-slate-500 text-xs ml-2">▼</span>
+            </div>
+            
+            {showOrgDropdown && (
+              <div className="absolute top-[75px] left-0 w-full bg-slate-800 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden">
+                <div className="max-h-40 overflow-y-auto">
+                  {organizations.map((org, i) => (
+                    <div 
+                      key={i} 
+                      className={`px-3 py-2.5 text-xs cursor-pointer hover:bg-slate-700 transition ${organization === org ? 'text-sky-400 font-bold bg-slate-900 border-l-2 border-sky-400' : 'text-slate-300'}`}
+                      onClick={() => handleSwitchOrg(org)}
+                    >
+                      {org}
+                    </div>
+                  ))}
+                </div>
+                <div 
+                  className="px-3 py-2.5 text-xs border-t border-slate-700 text-emerald-400 hover:bg-slate-700 cursor-pointer transition flex items-center gap-2"
+                  onClick={() => setShowNewOrgModal(true)}
+                >
+                  <span className="text-lg leading-none">+</span> Create New
+                </div>
+              </div>
+            )}
           </div>
           <button onClick={() => setCollapsed(!collapsed)} className="text-slate-400 hover:text-white shrink-0 ml-2">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
@@ -246,21 +294,12 @@ function UserDashboard() {
               <h3 className="text-2xl font-bold text-white mb-8 border-b border-slate-700 pb-4">New Campaign</h3>
               <div className="space-y-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-400 mb-2 uppercase tracking-wide">Campaign Name</label>
-                  <input
-                    className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3.5 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all outline-none shadow-inner"
-                    placeholder="Eg: Summer Sale 2026"
-                    value={newCampaign.name}
-                    onChange={(e) => setNewCampaign({ ...newCampaign, name: e.target.value })}
-                  />
-                </div>
-                <div>
                   <label className="block text-sm font-semibold text-slate-400 mb-2 uppercase tracking-wide">Subject Line</label>
                   <input
                     className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3.5 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all outline-none shadow-inner"
                     placeholder="Enter a catchy subject"
-                    value={newCampaign.subject}
-                    onChange={(e) => setNewCampaign({ ...newCampaign, subject: e.target.value })}
+                    value={emailForm.subject}
+                    onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
                   />
                 </div>
                 <div>
@@ -268,11 +307,11 @@ function UserDashboard() {
                   <textarea
                     className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-4 py-3.5 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all outline-none shadow-inner min-h-[200px]"
                     placeholder="Write your email body..."
-                    value={newCampaign.content}
-                    onChange={(e) => setNewCampaign({ ...newCampaign, content: e.target.value })}
+                    value={emailForm.message}
+                    onChange={(e) => setEmailForm({ ...emailForm, message: e.target.value })}
                   />
                 </div>
-                <button className="btn-primary w-full py-4 text-lg mt-4 shadow-sky-500/20" onClick={createCampaign}>
+                <button className="btn-primary w-full py-4 text-lg mt-4 shadow-sky-500/20" onClick={sendCampaign}>
                   Launch Campaign
                 </button>
               </div>
@@ -314,12 +353,15 @@ function UserDashboard() {
           {activeTab === "templates" && (
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
               {templates.map((t, i) => (
-                <div key={i} className="glass-card bg-slate-800 border-slate-700 flex flex-col p-6 rounded-2xl hover:-translate-y-1 hover:border-sky-500/30 transition-all duration-300 shadow-xl">
-                  <h4 className="text-lg font-bold text-white mb-3 text-sky-400">{t.name}</h4>
-                  <p className="text-sm text-slate-400 mb-6 flex-1 bg-slate-900 border border-slate-700 p-4 rounded-xl">{t.content}</p>
+                <div key={i} className="glass-card bg-slate-800 border-slate-700 flex flex-col p-6 rounded-2xl hover:-translate-y-1 hover:border-sky-500/30 transition-all duration-300 shadow-xl overflow-hidden">
+                  <h4 className="text-lg font-bold text-white mb-3 text-sky-400 truncate">{t.name}</h4>
+                  <div className="text-sm text-slate-400 mb-6 flex-1 bg-white border border-slate-700 rounded-xl overflow-hidden relative shadow-inner min-h-[150px]">
+                    <iframe srcDoc={t.content} title={t.name} className="absolute inset-0 w-[200%] h-[200%] border-0 pointer-events-none scale-50 origin-top-left" />
+                    {!t.content.includes('<') && <p className="p-4 text-slate-800">{t.content}</p>}
+                  </div>
                   <button 
                     className="btn-outline w-full py-2.5 text-sm" 
-                    onClick={() => { setNewCampaign({ ...newCampaign, content: t.content }); setActiveTab("create"); }}
+                    onClick={() => { setEmailForm({ ...emailForm, subject: t.name, message: t.content, template: t.content }); setActiveTab("create"); }}
                   >
                     Use Template
                   </button>
@@ -329,6 +371,38 @@ function UserDashboard() {
           )}
         </div>
       </main>
+
+      {/* Create Org Modal */}
+      {showNewOrgModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] px-4">
+          <div className="bg-slate-800 border border-slate-700/50 rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl">
+            <h3 className="text-xl font-bold text-white mb-2">Create Organization</h3>
+            <p className="text-slate-400 mb-6 text-sm">Enter the name for your new workspace.</p>
+            <input 
+              className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-sky-500 mb-6"
+              placeholder="Organization Name"
+              value={newOrgName}
+              onChange={(e) => setNewOrgName(e.target.value)}
+              autoFocus
+            />
+            <div className="flex items-center justify-end gap-3">
+              <button 
+                onClick={() => { setShowNewOrgModal(false); setNewOrgName(""); setShowOrgDropdown(false); }}
+                className="px-4 py-2 rounded-xl text-slate-300 hover:bg-slate-700/50 transition-colors font-medium text-sm"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleCreateOrg}
+                disabled={!newOrgName.trim()}
+                className="px-4 py-2 rounded-xl bg-sky-500 hover:bg-sky-400 text-white shadow-lg shadow-sky-500/20 transition-all font-medium text-sm disabled:opacity-50"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

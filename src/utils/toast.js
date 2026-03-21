@@ -7,5 +7,8 @@ export const toast = {
   },
   warn: (message) => {
     window.dispatchEvent(new CustomEvent('custom-toast', { detail: { message, type: 'warning' } }));
+  },
+  info: (message) => {
+    window.dispatchEvent(new CustomEvent('custom-toast', { detail: { message, type: 'info' } }));
   }
 };

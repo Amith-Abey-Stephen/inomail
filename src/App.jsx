@@ -37,6 +37,7 @@ function App() {
 
         {/* SUBSCRIPTION FLOW */}
         <Route path="/subscription" element={<SubscriptionDashboard />} />
+        <Route path="/SubscriptionDashboard" element={<SubscriptionDashboard />} />
         <Route path="/payment" element={<PaymentDetails />} />
         <Route path="/payment-success" element={<PaymentSuccess />} />
 

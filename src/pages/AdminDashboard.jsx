@@ -27,6 +27,7 @@ function AdminDashboard() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [testEmail, setTestEmail] = useState("");
   const [drafts, setDrafts] = useState([]);
+  const [assets, setAssets] = useState([]);
 
   const [emailForm, setEmailForm] = useState({
     subject: "",
@@ -112,6 +113,23 @@ function AdminDashboard() {
     setOrgSettings(updated);
     localStorage.setItem("orgSettings", JSON.stringify(updated));
     toast.success("API key regenerated");
+  };
+
+  const handleAssetUpload = (e, index) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    const updated = [...assets];
+    updated[index] = { label: `Asset ${index + 1}`, files };
+    setAssets(updated);
+    toast.success(`Asset ${index + 1}: ${files.length} file${files.length > 1 ? 's' : ''} added.`);
+  };
+
+  const removeAsset = (index) => {
+    setAssets(assets.filter((_, i) => i !== index));
+  };
+
+  const addAssetSlot = () => {
+    setAssets([...assets, null]);
   };
 
   const handleExcelUpload = (e) => {
@@ -625,13 +643,51 @@ DO NOT wrap in markdown \`\`\`json blocks. Return raw JSON text. No conversation
                       <textarea rows="6" className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 resize-none font-mono text-sm leading-relaxed" placeholder="Write HTML or raw text here..." value={emailForm.message} onChange={(e) => setEmailForm({...emailForm, message: e.target.value})} />
                     </div>
                   </div>
-                  <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-6 flex flex-col gap-4">
+                  <div className="bg-slate-800/30 border border-slate-700/50 rounded-2xl p-6 flex flex-col gap-5">
                      <h3 className="font-semibold text-white">👥 Audience</h3>
-                     <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center text-center relative hover:bg-slate-800/50 transition cursor-pointer">
+                     <div className="border-2 border-dashed border-slate-700 rounded-xl p-6 flex flex-col items-center justify-center text-center relative hover:bg-slate-800/50 transition cursor-pointer">
                         <input type="file" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" accept=".xlsx,.csv" onChange={handleExcelUpload} />
-                        <span className="text-4xl mb-3">📂</span>
-                        <p className="text-sm font-medium text-slate-300">Upload Contact List</p>
+                        <span className="text-3xl mb-2">📂</span>
+                        <p className="text-sm font-medium text-slate-300">{recipients.length > 0 ? `✅ ${recipients.length} recipients loaded` : "Upload Contact List"}</p>
                         <p className="text-xs text-slate-500 mt-1">.csv, .xlsx</p>
+                     </div>
+
+                     <div>
+                       <div className="flex items-center justify-between mb-3">
+                         <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider">📎 Asset Groups</label>
+                         <button onClick={addAssetSlot} className="text-xs text-sky-400 border border-sky-500/30 bg-sky-500/10 hover:bg-sky-500/20 px-2 py-1 rounded-lg font-medium transition">+ Add Group</button>
+                       </div>
+                       {assets.length === 0 && (
+                         <p className="text-xs text-slate-500 italic text-center py-4">No asset groups yet. Click "+ Add Group" to start.</p>
+                       )}
+                       <div className="flex flex-col gap-3">
+                         {assets.map((asset, idx) => (
+                           <div key={idx}>
+                             {asset ? (
+                               <div className="bg-slate-900 border border-emerald-500/30 rounded-xl p-3 flex flex-col gap-2">
+                                 <div className="flex items-center justify-between">
+                                   <span className="text-xs font-bold text-emerald-400">{asset.label} <span className="text-slate-500 font-normal">({asset.files.length} files)</span></span>
+                                   <button onClick={() => removeAsset(idx)} className="text-xs text-red-400 hover:text-red-300">✕ Remove</button>
+                                 </div>
+                                 <div className="flex flex-wrap gap-1 max-h-[80px] overflow-y-auto">
+                                   {asset.files.map((f, fi) => (
+                                     <span key={fi} className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded truncate max-w-[120px]" title={f.name}>{f.name}</span>
+                                   ))}
+                                 </div>
+                               </div>
+                             ) : (
+                               <label className="border-2 border-dashed border-slate-700 hover:border-sky-500/50 rounded-xl p-4 flex items-center gap-3 cursor-pointer transition">
+                                 <input type="file" multiple className="hidden" onChange={(e) => handleAssetUpload(e, idx)} />
+                                 <span className="text-xl">📁</span>
+                                 <div>
+                                   <span className="text-xs text-slate-300 font-medium block">Asset Group {idx + 1}</span>
+                                   <span className="text-[10px] text-slate-600">Click to bulk upload files</span>
+                                 </div>
+                               </label>
+                             )}
+                           </div>
+                         ))}
+                       </div>
                      </div>
                   </div>
                 </div>

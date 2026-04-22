@@ -137,7 +137,7 @@ export default function SignupPage() {
                 className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-primary transition-colors appearance-none"
               >
                 <option value="Starter">Starter (Free)</option>
-                <option value="Pro">Pro ($29/mo)</option>
+                <option value="Pro">Pro (₹29/mo)</option>
               </select>
             </div>
 

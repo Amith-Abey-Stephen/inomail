@@ -26,18 +26,18 @@ export function Footer() {
           <div>
             <h3 className="font-semibold text-white mb-4">Product</h3>
             <ul className="space-y-3">
-              <li><Link href="#features" className="text-gray-400 hover:text-white text-sm transition-colors">Features</Link></li>
-              <li><Link href="#pricing" className="text-gray-400 hover:text-white text-sm transition-colors">Pricing</Link></li>
-              <li><Link href="#about" className="text-gray-400 hover:text-white text-sm transition-colors">About Us</Link></li>
+              <li><Link href="#features" className="text-gray-400 hover:text-white hover:translate-x-1 inline-block text-sm transition-all">Features</Link></li>
+              <li><Link href="#pricing" className="text-gray-400 hover:text-white hover:translate-x-1 inline-block text-sm transition-all">Pricing</Link></li>
+              <li><Link href="#about" className="text-gray-400 hover:text-white hover:translate-x-1 inline-block text-sm transition-all">About Us</Link></li>
             </ul>
           </div>
 
           <div>
             <h3 className="font-semibold text-white mb-4">Legal</h3>
             <ul className="space-y-3">
-              <li><Link href="/privacy" className="text-gray-400 hover:text-white text-sm transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="text-gray-400 hover:text-white text-sm transition-colors">Terms of Service</Link></li>
-              <li><Link href="#contact" className="text-gray-400 hover:text-white text-sm transition-colors">Contact</Link></li>
+              <li><Link href="/privacy" className="text-gray-400 hover:text-white hover:translate-x-1 inline-block text-sm transition-all">Privacy Policy</Link></li>
+              <li><Link href="/terms" className="text-gray-400 hover:text-white hover:translate-x-1 inline-block text-sm transition-all">Terms of Service</Link></li>
+              <li><Link href="#contact" className="text-gray-400 hover:text-white hover:translate-x-1 inline-block text-sm transition-all">Contact</Link></li>
             </ul>
           </div>
         </div>

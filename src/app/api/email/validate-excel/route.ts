@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import * as xlsx from "xlsx";
 import { verifyToken } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
-    const token = req.cookies.get("token")?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
-    if (!verifyToken(token)) {
+    const user = verifyToken(token);
+    if (!user) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 

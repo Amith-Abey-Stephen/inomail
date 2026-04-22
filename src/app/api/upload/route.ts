@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { v2 as cloudinary } from "cloudinary";
-import { verifyToken } from "@/lib/auth";
+import { verifyToken, UserPayload } from "@/lib/auth";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -10,10 +11,11 @@ cloudinary.config({
 
 export async function POST(req: Request) {
   try {
-    const token = req.cookies.get("token")?.value;
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
     if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     
-    const user = verifyToken(token);
+    const user = verifyToken(token) as UserPayload;
     if (!user) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
 
     const formData = await req.formData();

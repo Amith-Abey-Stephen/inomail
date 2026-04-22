@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
     const { data, error } = await resend.emails.send({
       from: "InoMail Contact <contact@amith.site>",
-      to: ["support@inovuslabs.org", ""],
+      to: ["support@inovuslabs.org", "contact.inovuslabs@gmail.com"],
       subject: `New Contact Form Submission from ${firstName} ${lastName}`,
       replyTo: email,
       html: `

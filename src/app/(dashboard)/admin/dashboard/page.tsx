@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { motion } from "framer-motion";
-import { Users, Mailbox, Send, AlertCircle, TrendingUp, MoreHorizontal } from "lucide-react";
+import { Users, Mailbox, Send, AlertCircle, TrendingUp, MoreHorizontal, ArrowRight } from "lucide-react";
 
 export default function AdminDashboardPage() {
   const stats = [
@@ -18,9 +19,11 @@ export default function AdminDashboardPage() {
           <h1 className="text-3xl font-bold text-white mb-1">Overview</h1>
           <p className="text-gray-400 text-sm">Welcome back! Here's what's happening today.</p>
         </div>
-        <button className="bg-white text-black px-4 py-2 rounded-lg font-medium text-sm hover:bg-gray-200 transition-colors shadow-lg">
-          Create Campaign
-        </button>
+        <Link href="/admin/send">
+          <button className="bg-white text-black px-4 py-2 rounded-lg font-medium text-sm hover:bg-gray-200 transition-colors shadow-lg">
+            Create Campaign
+          </button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -108,9 +111,11 @@ export default function AdminDashboardPage() {
             <div className="mt-8 p-4 bg-primary/10 border border-primary/20 rounded-xl">
               <h4 className="text-primary font-medium text-sm mb-2">Upgrade to Enterprise</h4>
               <p className="text-xs text-gray-400 mb-4">Get unlimited emails, dedicated queues, and custom rate limits.</p>
-              <button className="w-full bg-primary text-white text-xs font-medium py-2 rounded-lg hover:bg-primary/90 transition-colors">
-                View Plans
-              </button>
+              <Link href="/admin/settings">
+                <button className="w-full bg-primary text-white text-xs font-medium py-2 rounded-lg hover:bg-primary/90 transition-colors">
+                  View Plans
+                </button>
+              </Link>
             </div>
           </div>
         </div>

@@ -4,13 +4,13 @@ InoMail is a high-performance, multi-tenant SaaS platform designed for organizat
 
 ## 🚀 Key Features
 
-- **Single-Page Experience**: A fluid, modern landing page with smooth scrolling to Features, Pricing, About, and Contact sections.
+- **Multi-Step Onboarding**: A premium 3-step signup wizard (Identity, Plan, Organization) with Framer Motion animations and progress tracking.
+- **Secure Authentication**: Redis-backed OTP verification, real-time password security checklist, and mismatch validation.
+- **Dynamic Google OAuth**: Seamless Google integration that pre-fills profile data while ensuring all required organization details are captured.
 - **AI Email Generation**: Integrated with Google Gemini Pro to generate professional HTML email templates from simple text prompts.
-- **Excel Personalization**: Upload Excel files to dynamically inject recipient data (names, custom variables, assets) into emails.
+- **Excel Personalization**: Upload Excel files to dynamically inject recipient data into emails.
 - **Smart Queue Management**: Powered by **BullMQ** and **Redis** to handle high-volume dispatch with rate limiting and automatic retries.
-- **Multi-Tenant Architecture**: Support for multiple organizations with role-based access control (RBAC).
-- **Advanced Analytics**: Track campaign performance, open rates, and delivery status.
-- **Resend Integration**: Robust contact form handling using the Resend SDK.
+- **Database-Backed Sessions**: Enhanced security with server-side session validation against the database on every dashboard request.
 
 ## 🛠️ Tech Stack
 

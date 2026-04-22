@@ -35,19 +35,21 @@ export async function POST(req: Request) {
 
     // 4. Construct Prompt
     const structuredPrompt = `
-You are an expert email copywriter and HTML/CSS developer. 
-Your task is to write a beautifully formatted, responsive HTML email based on the following instructions:
+You are an elite email copywriter and HTML developer. 
+Create a premium, conversion-optimized HTML email based on:
 
 Prompt: "${prompt}"
 Tone: ${tone}
-
-Available dynamic variables that you CAN use in the email: ${variables.length > 0 ? variables.map((v: string) => `{{${v}}}`).join(', ') : "None"}
+Variables: ${variables.length > 0 ? variables.map((v: string) => `{{${v}}}`).join(', ') : "None"}
 
 Requirements:
-1. Return ONLY the raw HTML code (no markdown formatting, no \`\`\`html tags, no explanations).
-2. The HTML must be fully inline-styled and responsive (table-based layout is safe for emails).
-3. Ensure it looks professional, clean, and modern.
-4. If there are variables provided, use them naturally in the copy using the {{variable_name}} syntax.
+1. Return ONLY raw HTML code (no markdown, no explanations).
+2. Use a modern "card" layout with a subtle shadow and rounded corners.
+3. Use a professional font stack (sans-serif).
+4. Include a clear Call to Action (CTA) button with a vibrant background color.
+5. Ensure 100% responsiveness using a fluid table-based layout.
+6. Use high-contrast typography and plenty of whitespace.
+7. Naturally integrate the provided variables using {{variable_name}}.
 `;
 
     // 5. Generate Content

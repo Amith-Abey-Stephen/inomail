@@ -1,88 +1,76 @@
-# InoMail 🚀 – The Ultimate Enterprise Bulk Email & Asset Delivery Platform
+# InoMail - AI-Powered Bulk Email Platform
 
-InoMail is a high-performance, subscription-based bulk email delivery platform designed for modern organizations. Built with a focus on **security, scalability, and premium user experience**, InoMail empowers teams to manage large-scale email campaigns with precision and ease.
+InoMail is a high-performance, multi-tenant SaaS platform designed for organizations to manage and dispatch personalized bulk email campaigns. Built with Next.js 16 and Tailwind CSS v4, it leverages AI to simplify email creation and robust queue management to ensure reliable delivery.
 
----
+## 🚀 Key Features
 
-## ✨ Features That Set Us Apart
+- **Single-Page Experience**: A fluid, modern landing page with smooth scrolling to Features, Pricing, About, and Contact sections.
+- **AI Email Generation**: Integrated with Google Gemini Pro to generate professional HTML email templates from simple text prompts.
+- **Excel Personalization**: Upload Excel files to dynamically inject recipient data (names, custom variables, assets) into emails.
+- **Smart Queue Management**: Powered by **BullMQ** and **Redis** to handle high-volume dispatch with rate limiting and automatic retries.
+- **Multi-Tenant Architecture**: Support for multiple organizations with role-based access control (RBAC).
+- **Advanced Analytics**: Track campaign performance, open rates, and delivery status.
+- **Resend Integration**: Robust contact form handling using the Resend SDK.
 
-- **🚀 Massive Bulk Sending:** Deliver thousands of emails with a single click using verified SMTP infrastructure.
-- **🛡 Verified SMTP Setup:** Enterprise-grade authentication ensures your emails land in the inbox, not the spam folder.
-- **📈 Real-Time Tracking:** Monitor open rates, delivery success, and campaign engagement with live analytics.
-- **📂 Instant CSV Upload:** Simply upload your recipient list in CSV or Excel format and start your campaign in seconds.
-- **📊 Smart Campaign Reports:** Get deep insights with automated delivery reports and performance metrics.
-- **💎 Premium Glassmorphism UI:** A state-of-the-art interface designed for professional efficiency and visual excellence.
+## 🛠️ Tech Stack
 
----
+- **Framework**: [Next.js 16](https://nextjs.org/) (App Router)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **Database**: [MongoDB](https://www.mongodb.com/) with Mongoose
+- **Queueing**: [BullMQ](https://docs.bullmq.io/) + [Redis](https://redis.io/)
+- **AI**: [Google Gemini Pro](https://ai.google.dev/)
+- **Email SDK**: [Resend](https://resend.com/) & [Nodemailer](https://nodemailer.com/)
+- **Animations**: [Framer Motion](https://www.framer.com/motion/)
+- **Icons**: [Lucide React](https://lucide.dev/)
 
-## 🛠 Tech Stack
-
-- **Frontend:** React 18 + Vite (Ultralight, lightning-fast HMR)
-- **Styling:** Vanilla CSS 3 (Custom design system with Glassmorphism)
-- **Routing:** React Router 6 (Declarative navigation)
-- **Icons:** Modern SVG System + Lucide-style iconography
-- **Development Tooling:** ESLint + Prettier (Consistency across the codebase)
-
----
-
-## 🚦 Getting Started
+## ⚙️ Getting Started
 
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (v16.0.0 or higher)
-- [npm](https://www.npmjs.com/) (v8.0.0 or higher)
+- Node.js 20+
+- MongoDB instance
+- Redis server
+- API Keys for Google Gemini and Resend
 
 ### Installation
 
-1. **Clone the repository:**
+1. Clone the repository:
    ```bash
-   git clone https://github.com/Amith-Abey-Stephen/inomail.git
-   cd inomail
+   git clone <repository-url>
+   cd inomail-web
    ```
 
-2. **Install dependencies:**
+2. Install dependencies:
    ```bash
    npm install
    ```
 
-3. **Launch the development server:**
+3. Set up environment variables:
+   Create a `.env` file based on `.env.example`:
+   ```env
+   MONGODB_URI="your_mongodb_uri"
+   JWT_SECRET="your_secret_key"
+   GEMINI_API_KEY="your_gemini_key"
+   REDIS_URL="your_redis_url"
+   RESEND_API_KEY="your_resend_key"
+   CLOUDINARY_CLOUD_NAME="..."
+   CLOUDINARY_API_KEY="..."
+   CLOUDINARY_API_SECRET="..."
+   ```
+
+4. Run the development server:
    ```bash
    npm run dev
    ```
 
-4. **Build for production:**
-   ```bash
-   npm run build
-   ```
+## 🏗️ Project Structure
 
----
+- `src/app`: Next.js App Router (Marketing, Dashboard, Auth)
+- `src/components`: Reusable UI components (Layout, UI, Dashboard)
+- `src/lib`: Core logic (DB connection, Queue worker, AI integration)
+- `src/models`: Mongoose schemas (User, Organization, Campaign)
+- `src/proxy.ts`: Next.js Proxy (previously Middleware) for auth and routing
 
-## 📧 Demo Credentials
+## 📄 License
 
-| Role | Email | Password |
-| :--- | :--- | :--- |
-| **Super Admin** | `super@inomail.com` | `super123` |
-| **Admin** | `admin@inomail.com` | `admin123` |
-| **User** | `user@gmail.com` | `any` |
-
----
-
-## 🏗 Project Structure
-
-```text
-src/
-├── assets/          # Static assets (images, logos)
-├── components/      # (Planned) Shared UI components
-├── pages/           # Page-level components (Home, Dashboards, Auth)
-├── App.jsx          # Root component & Routing
-├── index.css        # Global Design System (Tokens, Utilities, Animations)
-└── main.jsx         # Application entry point
-```
-
----
-
-## 🤝 Contributing
-
-We welcome contributions! Please feel free to open an issue or submit a pull request if you have suggestions for improvements or new features.
-
-Built with ❤️ for Organizations Everywhere.
+Built with ❤️ by **Inovus Labs IEDC**.

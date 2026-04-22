@@ -70,3 +70,29 @@
     background-image: linear-gradient(to right, #818cf8, #a78bfa, #f472b6);
   }
 }
+
+/* Custom Premium Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #000;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #27272a;
+  border-radius: 10px;
+  border: 2px solid #000;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
+/* Global Placeholder Styling */
+input::placeholder, 
+textarea::placeholder {
+  color: rgba(255, 255, 255, 0.2) !important;
+  font-weight: 400;
+}

@@ -1,0 +1,46 @@
+export const PRICING_PLANS = [
+  {
+    name: "Starter",
+    price: "Free",
+    period: "",
+    desc: "Perfect for testing the platform.",
+    features: [
+      "1 Organization",
+      "Up to 100 emails/month",
+      "Basic AI Templates",
+      "Community Support",
+    ],
+    popular: false,
+    cta: "Get Started",
+  },
+  {
+    name: "Pro",
+    price: "₹29",
+    period: "/mo",
+    desc: "For growing organizations.",
+    features: [
+      "Unlimited Organizations",
+      "Up to 10,000 emails/month",
+      "Advanced AI Generation",
+      "Priority Queue Processing",
+      "Email Support",
+    ],
+    popular: true,
+    cta: "Start Free Trial",
+  },
+  {
+    name: "Enterprise",
+    price: "Custom",
+    period: "",
+    desc: "For massive scale.",
+    features: [
+      "Unlimited Everything",
+      "Dedicated Queue Worker",
+      "Custom Rate Limiting",
+      "24/7 Phone Support",
+      "SLA Guarantee",
+    ],
+    popular: false,
+    cta: "Contact Sales",
+  },
+];

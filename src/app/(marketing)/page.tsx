@@ -8,6 +8,7 @@ import {
   Check, Users, Lightbulb, Rocket,
   Mail, MessageSquare, MapPin, Shield
 } from "lucide-react";
+import { PRICING_PLANS } from "@/lib/constants/pricing";
 
 export default function Home() {
   const fadeIn = {
@@ -25,51 +26,7 @@ export default function Home() {
     }
   };
 
-  const plans = [
-    {
-      name: "Starter",
-      price: "Free",
-      desc: "Perfect for testing the platform.",
-      features: [
-        "1 Organization",
-        "Up to 100 emails/month",
-        "Basic AI Templates",
-        "Community Support",
-      ],
-      cta: "Get Started",
-      popular: false,
-    },
-    {
-      name: "Pro",
-      price: "₹29",
-      period: "/month",
-      desc: "For growing organizations.",
-      features: [
-        "Unlimited Organizations",
-        "Up to 10,000 emails/month",
-        "Advanced AI Generation",
-        "Priority Queue Processing",
-        "3 Asset Groups per Campaign",
-        "Email Support",
-      ],
-      cta: "Start Free Trial",
-      popular: true,
-    },
-    {
-      name: "Enterprise",
-      price: "Custom",
-      desc: "For massive scale.",
-      features: [
-        "Unlimited Everything",
-        "Dedicated Queue Worker",
-        "Custom Rate Limiting",
-        "24/7 Phone Support",
-        "SLA Guarantee",
-      ],
-      cta: "Contact Sales",
-      popular: false,
-    },
-  ];
+  const plans = PRICING_PLANS;
 
   const [formState, setFormState] = useState({
     firstName: "",

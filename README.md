@@ -4,13 +4,14 @@ InoMail is a high-performance, multi-tenant SaaS platform designed for organizat
 
 ## 🚀 Key Features
 
+- **Multi-Tenant Organization Management**: Seamlessly switch between multiple organizations and create new ones with plan-based limitations.
+- **Dynamic Admin Dashboard**: Real-time insights into campaign performance, including total sent, open rates, bounce rates, and plan usage tracking.
+- **Smart OTP Verification with Fallback**: Redis-backed OTP verification for security, featuring an automatic **In-Memory Fallback** system for local development without Redis.
+- **AI-Powered Generation (OpenRouter)**: Advanced email template generation using the **OpenRouter** API, supporting the latest models like Gemini 2.0 Flash Lite.
+- **Modern Toast Notifications**: Integrated with **Sonner** for fluid, non-blocking visual feedback on all major user actions.
 - **Multi-Step Onboarding**: A premium 3-step signup wizard (Identity, Plan, Organization) with Framer Motion animations and progress tracking.
-- **Secure Authentication**: Redis-backed OTP verification, real-time password security checklist, and mismatch validation.
-- **Dynamic Google OAuth**: Seamless Google integration that pre-fills profile data while ensuring all required organization details are captured.
-- **AI Email Generation**: Integrated with Google Gemini Pro to generate professional HTML email templates from simple text prompts.
 - **Excel Personalization**: Upload Excel files to dynamically inject recipient data into emails.
 - **Smart Queue Management**: Powered by **BullMQ** and **Redis** to handle high-volume dispatch with rate limiting and automatic retries.
-- **Database-Backed Sessions**: Enhanced security with server-side session validation against the database on every dashboard request.
 
 ## 🛠️ Tech Stack
 
@@ -18,7 +19,8 @@ InoMail is a high-performance, multi-tenant SaaS platform designed for organizat
 - **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
 - **Database**: [MongoDB](https://www.mongodb.com/) with Mongoose
 - **Queueing**: [BullMQ](https://docs.bullmq.io/) + [Redis](https://redis.io/)
-- **AI**: [Google Gemini Pro](https://ai.google.dev/)
+- **AI**: [OpenRouter API](https://openrouter.ai/) (Gemini/GPT)
+- **Feedback**: [Sonner](https://sonner.emilkowal.ski/)
 - **Email SDK**: [Resend](https://resend.com/) & [Nodemailer](https://nodemailer.com/)
 - **Animations**: [Framer Motion](https://www.framer.com/motion/)
 - **Icons**: [Lucide React](https://lucide.dev/)
@@ -29,8 +31,8 @@ InoMail is a high-performance, multi-tenant SaaS platform designed for organizat
 
 - Node.js 20+
 - MongoDB instance
-- Redis server
-- API Keys for Google Gemini and Resend
+- Redis server (Optional: In-memory fallback provided for development)
+- API Keys for OpenRouter and Resend
 
 ### Installation
 
@@ -50,7 +52,7 @@ InoMail is a high-performance, multi-tenant SaaS platform designed for organizat
    ```env
    MONGODB_URI="your_mongodb_uri"
    JWT_SECRET="your_secret_key"
-   GEMINI_API_KEY="your_gemini_key"
+   OPENROUTER_API_KEY="your_openrouter_key"
    REDIS_URL="your_redis_url"
    RESEND_API_KEY="your_resend_key"
    CLOUDINARY_CLOUD_NAME="..."
@@ -67,9 +69,9 @@ InoMail is a high-performance, multi-tenant SaaS platform designed for organizat
 
 - `src/app`: Next.js App Router (Marketing, Dashboard, Auth)
 - `src/components`: Reusable UI components (Layout, UI, Dashboard)
-- `src/lib`: Core logic (DB connection, Queue worker, AI integration)
+- `src/lib`: Core logic (DB connection, Queue worker, AI integration, Redis client)
 - `src/models`: Mongoose schemas (User, Organization, Campaign)
-- `src/proxy.ts`: Next.js Proxy (previously Middleware) for auth and routing
+- `src/proxy.ts`: Next.js Proxy for auth and routing
 
 ## 📄 License
 

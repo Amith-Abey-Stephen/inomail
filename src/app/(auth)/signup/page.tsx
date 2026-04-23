@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Mail, Loader2, ArrowRight, Check, Shield, Globe, User, Phone, Lock, Building, CheckCircle2, XCircle, Eye, EyeOff } from "lucide-react";
@@ -8,9 +8,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { PRICING_PLANS } from "@/lib/constants/pricing";
 import { toast } from "sonner";
 
-export default function SignupPage() {
+function SignupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  
+  // Initialize state in useEffect to avoid searchParams bailout during static gen if possible
+  // Though Suspense should handle it.
   const provider = searchParams.get("provider");
   const initialStep = parseInt(searchParams.get("step") || "1");
   
@@ -31,6 +34,22 @@ export default function SignupPage() {
     plan: "Starter",
     organizationName: "",
   });
+
+  // Sync from URL params if they change (e.g. Google OAuth redirect)
+  useEffect(() => {
+    const name = searchParams.get("name");
+    const email = searchParams.get("email");
+    if (name || email) {
+      setFormData(prev => ({
+        ...prev,
+        name: name || prev.name,
+        email: email || prev.email,
+      }));
+    }
+    if (searchParams.get("provider") === "google") {
+      setEmailVerified(true);
+    }
+  }, [searchParams]);
 
   // Password security checks
   const [passwordSecurity, setPasswordSecurity] = useState({
@@ -474,5 +493,13 @@ export default function SignupPage() {
         </div>
       </div>
     </motion.div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[400px]"><Loader2 className="w-8 h-8 text-primary animate-spin" /></div>}>
+      <SignupContent />
+    </Suspense>
   );
 }

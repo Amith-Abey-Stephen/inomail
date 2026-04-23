@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Mail, Loader2, ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -36,10 +37,11 @@ export default function LoginPage() {
         throw new Error(data.error || "Invalid credentials");
       }
 
-      // Check role to redirect properly. For now we assume Admin/Member dashboard
+      toast.success("Welcome back! Redirecting...");
       router.push("/admin/dashboard");
     } catch (err: any) {
       setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }

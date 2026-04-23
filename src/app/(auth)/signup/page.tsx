@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Mail, Loader2, ArrowRight, Check, Shield, Globe, User, Phone, Lock, Building, CheckCircle2, XCircle, Eye, EyeOff } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { PRICING_PLANS } from "@/lib/constants/pricing";
+import { toast } from "sonner";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -65,11 +66,15 @@ export default function SignupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email }),
       });
-      if (!res.ok) throw new Error("Failed to send OTP");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to send OTP");
+      
+      toast.success("Verification code sent to your email!");
       setOtpSent(true);
       setError("");
     } catch (err: any) {
       setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -83,11 +88,15 @@ export default function SignupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: formData.email, otp }),
       });
-      if (!res.ok) throw new Error("Invalid OTP");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Invalid OTP");
+      
+      toast.success("Email verified successfully!");
       setEmailVerified(true);
       setError("");
     } catch (err: any) {
       setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }
@@ -116,9 +125,12 @@ export default function SignupPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Signup failed");
+      
+      toast.success("Welcome to InoMail! Your account is ready.");
       router.push("/admin/dashboard");
     } catch (err: any) {
       setError(err.message);
+      toast.error(err.message);
     } finally {
       setLoading(false);
     }

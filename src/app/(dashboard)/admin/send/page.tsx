@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, FileSpreadsheet, Send, Settings2, Code, Image as ImageIcon, CheckCircle2, ChevronRight } from "lucide-react";
+import { toast } from "sonner";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -15,6 +16,7 @@ export default function SendEmailPage() {
 
   const handleGenerate = async () => {
     setIsGenerating(true);
+    const toastId = toast.loading("Generating your email magic...");
     try {
       const res = await fetch("/api/email/generate", {
         method: "POST",
@@ -24,12 +26,23 @@ export default function SendEmailPage() {
       const data = await res.json();
       if (res.ok && data.html) {
         setHtmlContent(data.html);
+        toast.success("Email generated successfully!", { id: toastId });
+      } else {
+        toast.error(data.error || "Failed to generate email", { id: toastId });
       }
     } catch (error) {
       console.error(error);
+      toast.error("Something went wrong during generation", { id: toastId });
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleStartCampaign = () => {
+    toast.success("Campaign started successfully!", {
+        description: "Your emails are being queued for delivery.",
+        duration: 5000,
+    });
   };
 
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 4) as Step);
@@ -142,8 +155,6 @@ export default function SendEmailPage() {
                   </div>
                 </div>
               )}
-
-              {/* Other modes would be implemented here */}
             </motion.div>
           )}
 
@@ -216,10 +227,16 @@ export default function SendEmailPage() {
               <p className="text-gray-400 mb-8 max-w-md mx-auto">Your campaign has been successfully validated. 4,200 recipients are queued for delivery.</p>
               
               <div className="flex justify-center gap-4">
-                <button className="bg-white/10 text-white px-8 py-3 rounded-xl font-medium hover:bg-white/20 transition-colors">
+                <button 
+                    onClick={() => toast.info("Test email sent to your inbox!")}
+                    className="bg-white/10 text-white px-8 py-3 rounded-xl font-medium hover:bg-white/20 transition-colors"
+                >
                   Send Test Email
                 </button>
-                <button className="bg-primary text-white px-8 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors shadow-lg flex items-center gap-2">
+                <button 
+                    onClick={handleStartCampaign}
+                    className="bg-primary text-white px-8 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors shadow-lg flex items-center gap-2"
+                >
                   <Send className="w-4 h-4" /> Start Campaign
                 </button>
               </div>

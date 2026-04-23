@@ -1,9 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { verifyToken } from "@/lib/auth";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: Request) {
   try {
@@ -19,8 +16,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid token" }, { status: 401 });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return NextResponse.json({ error: "Gemini API Key is not configured." }, { status: 500 });
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: "OpenRouter API Key is not configured." }, { status: 500 });
     }
 
     // 2. Parse Request
@@ -30,10 +28,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    // 3. Initialize Gemini Model
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-    // 4. Construct Prompt
+    // 3. Construct Prompt
     const structuredPrompt = `
 You are an elite email copywriter and HTML developer. 
 Create a premium, conversion-optimized HTML email based on:
@@ -52,12 +47,35 @@ Requirements:
 7. Naturally integrate the provided variables using {{variable_name}}.
 `;
 
-    // 5. Generate Content
-    const result = await model.generateContent(structuredPrompt);
-    const response = await result.response;
-    let htmlContent = response.text();
+    // 4. Generate Content using OpenRouter
+    const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+        "X-Title": "InoMail",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.0-flash-lite:free", // High performance free model
+        messages: [
+          { role: "system", content: "You are a specialized HTML email template generator." },
+          { role: "user", content: structuredPrompt }
+        ],
+        temperature: 0.7,
+      }),
+    });
 
-    // 6. Clean up markdown artifacts if the model disobeys
+    const data = await response.json();
+    
+    if (data.error) {
+      console.error("OpenRouter API Error:", data.error);
+      return NextResponse.json({ error: data.error.message || "Failed to generate email" }, { status: 500 });
+    }
+
+    let htmlContent = data.choices[0].message.content;
+
+    // 5. Clean up markdown artifacts if the model disobeys
     htmlContent = htmlContent.replace(/^```html\s*/, "").replace(/\s*```$/, "");
 
     return NextResponse.json({ html: htmlContent }, { status: 200 });

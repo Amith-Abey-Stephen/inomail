@@ -57,7 +57,7 @@ Requirements:
         "X-Title": "InoMail",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.0-flash-lite:free", // High performance free model
+        model: "meta-llama/llama-3.3-70b-instruct", // High performance Llama 3.3 model
         messages: [
           { role: "system", content: "You are a specialized HTML email template generator." },
           { role: "user", content: structuredPrompt }

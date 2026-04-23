@@ -10,7 +10,7 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 1. Define Route Protection
-  const isAuthRoute = pathname === "/login" || pathname === "/signup";
+  const isAuthRoute = pathname === "/login" || pathname === "/signup" || pathname.startsWith("/api/auth");
   const isProtectedRoute = pathname.startsWith("/admin");
   const isApiRoute = pathname.startsWith("/api");
 

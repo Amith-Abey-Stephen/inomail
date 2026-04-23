@@ -15,18 +15,12 @@ export async function POST(req: Request) {
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
-    // Store in Redis with 10 min expiry
-    // If Redis is not available, I'll need a fallback. Let's check src/lib/redis
-    if (redis) {
-      await redis.set(`otp:${email}`, otp, "EX", 600);
-    } else {
-      // Fallback if no redis (for now, maybe a global variable or just error out)
-      return NextResponse.json({ error: "OTP storage not configured" }, { status: 500 });
-    }
+    // Store in Redis (Proxy will handle fallback to memory if redis is down)
+    await redis.set(`otp:${email}`, otp, "EX", 600);
 
     // Send Email
-    await resend.emails.send({
-      from: "InoMail <onboarding@resend.dev>", // Should be verified domain later
+    const { data, error } = await resend.emails.send({
+      from: "InoMail <onboarding@resend.dev>",
       to: email,
       subject: "Your Verification Code - InoMail",
       html: `
@@ -41,6 +35,13 @@ export async function POST(req: Request) {
         </div>
       `,
     });
+
+    if (error) {
+      console.error("Resend API Error:", error);
+      return NextResponse.json({ error: error.message || "Failed to send email" }, { status: 500 });
+    }
+
+    console.log("OTP Email Sent successfully to:", email, "ID:", data?.id);
 
     return NextResponse.json({ message: "OTP sent successfully" });
   } catch (error: any) {

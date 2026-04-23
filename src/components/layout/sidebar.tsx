@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { LayoutDashboard, MailPlus, History, Building2, Settings, LogOut } from "lucide-react";
 import { motion } from "framer-motion";
+import { OrgSwitcher } from "@/components/dashboard/OrgSwitcher";
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -26,6 +27,8 @@ export function Sidebar() {
           <span className="font-bold text-xl tracking-tight text-white">InoMail</span>
         </Link>
       </div>
+
+      <OrgSwitcher />
 
       <div className="flex-1 px-4 py-6 flex flex-col gap-2">
         {links.map((link) => {

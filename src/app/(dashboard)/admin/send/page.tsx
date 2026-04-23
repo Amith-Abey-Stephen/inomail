@@ -1,22 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, FileSpreadsheet, Send, Settings2, Code, Image as ImageIcon, CheckCircle2, ChevronRight } from "lucide-react";
+import { Sparkles, FileSpreadsheet, Send, Settings2, Code, Image as ImageIcon, CheckCircle2, ChevronRight, Copy, Loader2, Monitor, Smartphone, Tablet, ChevronLeft, Layout, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 type Step = 1 | 2 | 3 | 4;
 
 export default function SendEmailPage() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
-  const [emailMode, setEmailMode] = useState<"ai" | "template" | "html">("ai");
+  const [isEditing, setIsEditing] = useState(false);
   const [prompt, setPrompt] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
   const [htmlContent, setHtmlContent] = useState("");
+  const [previewScale, setPreviewScale] = useState(0.85);
+  const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
+  const [showCode, setShowCode] = useState(true);
 
   const handleGenerate = async () => {
+    if (!prompt) return;
     setIsGenerating(true);
-    const toastId = toast.loading("Generating your email magic...");
+    const toastId = toast.loading("Generating your masterpiece...");
     try {
       const res = await fetch("/api/email/generate", {
         method: "POST",
@@ -26,243 +30,367 @@ export default function SendEmailPage() {
       const data = await res.json();
       if (res.ok && data.html) {
         setHtmlContent(data.html);
-        toast.success("Email generated successfully!", { id: toastId });
+        setIsEditing(true);
+        toast.success("Design ready!", { id: toastId });
       } else {
-        toast.error(data.error || "Failed to generate email", { id: toastId });
+        toast.error(data.error || "Generation failed", { id: toastId });
       }
     } catch (error) {
       console.error(error);
-      toast.error("Something went wrong during generation", { id: toastId });
+      toast.error("Something went wrong", { id: toastId });
     } finally {
       setIsGenerating(false);
     }
   };
 
-  const handleStartCampaign = () => {
-    toast.success("Campaign started successfully!", {
-        description: "Your emails are being queued for delivery.",
-        duration: 5000,
-    });
+  const copyCode = () => {
+    navigator.clipboard.writeText(htmlContent);
+    toast.success("Code copied!");
   };
 
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 4) as Step);
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1) as Step);
 
+  const getDeviceWidth = () => {
+    switch (previewDevice) {
+      case "mobile": return "375px";
+      case "tablet": return "768px";
+      case "desktop": return "1440px";
+      default: return "100%";
+    }
+  };
+
+  const startFromScratch = () => {
+    setHtmlContent(`<!DOCTYPE html>
+<html>
+<head>
+<style>
+  body { font-family: sans-serif; background: #f4f4f4; padding: 40px; }
+  .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 600px; margin: auto; }
+  h1 { color: #333; }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>Hello World</h1>
+    <p>Start editing this template...</p>
+  </div>
+</body>
+</html>`);
+    setIsEditing(true);
+    setShowCode(true);
+  };
+
   return (
-    <div className="max-w-5xl mx-auto pb-20">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Create Campaign</h1>
-        <p className="text-gray-400">Design your email, upload recipients, and send your campaign.</p>
-      </div>
-
-      {/* Stepper */}
-      <div className="flex items-center justify-between mb-12 relative">
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-white/5 rounded-full z-0"></div>
-        <div 
-          className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-primary rounded-full z-0 transition-all duration-500"
-          style={{ width: `${((currentStep - 1) / 3) * 100}%` }}
-        ></div>
-
-        {[
-          { step: 1, title: "Design", icon: <Sparkles className="w-4 h-4" /> },
-          { step: 2, title: "Assets", icon: <ImageIcon className="w-4 h-4" /> },
-          { step: 3, title: "Recipients", icon: <FileSpreadsheet className="w-4 h-4" /> },
-          { step: 4, title: "Review", icon: <Send className="w-4 h-4" /> },
-        ].map((s) => (
-          <div key={s.step} className="relative z-10 flex flex-col items-center gap-2">
-            <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors duration-300 ${
-              currentStep >= s.step ? "bg-primary border-primary text-white shadow-[0_0_15px_rgba(99,102,241,0.5)]" : "bg-[#09090b] border-white/10 text-gray-500"
-            }`}>
-              {currentStep > s.step ? <CheckCircle2 className="w-5 h-5" /> : s.icon}
+    <div className="max-w-[1600px] mx-auto pb-20 px-4">
+      {/* Header & Stepper */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
+        <div>
+          <h1 className="text-3xl font-black text-white tracking-tight">Campaign Studio</h1>
+          <p className="text-gray-400 text-sm font-medium">Step {currentStep} of 4: {currentStep === 1 ? "Design" : currentStep === 2 ? "Assets" : currentStep === 3 ? "Recipients" : "Review"}</p>
+        </div>
+        
+        <div className="flex items-center gap-2 bg-white/5 p-1 rounded-2xl border border-white/10">
+          {[1, 2, 3, 4].map((s) => (
+            <div 
+              key={s}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center text-xs font-bold transition-all ${
+                currentStep === s ? "bg-primary text-white shadow-lg" : currentStep > s ? "bg-primary/10 text-primary" : "text-gray-600 bg-transparent"
+              }`}
+            >
+              {currentStep > s ? <CheckCircle2 className="w-5 h-5" /> : s}
             </div>
-            <span className={`text-xs font-medium ${currentStep >= s.step ? "text-white" : "text-gray-500"}`}>{s.title}</span>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      {/* Step Content */}
-      <div className="glass-card rounded-3xl border-white/10 p-6 md:p-8 min-h-[500px]">
-        <AnimatePresence mode="wait">
-          {currentStep === 1 && (
-            <motion.div
-              key="step1"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="flex flex-col h-full"
-            >
-              <div className="flex items-center gap-4 mb-8">
-                <button 
-                  onClick={() => setEmailMode("ai")}
-                  className={`flex-1 py-3 rounded-xl border transition-all ${emailMode === 'ai' ? 'bg-primary/20 border-primary/50 text-primary' : 'bg-transparent border-white/10 text-gray-400 hover:bg-white/5'}`}
+      <AnimatePresence mode="wait">
+        {currentStep === 1 && (
+          <motion.div
+            key="step1"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="flex flex-col h-[calc(100vh-250px)] min-h-[700px]"
+          >
+            {!isEditing ? (
+              /* Initial State: Big Prompt Box */
+              <div className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto w-full">
+                <motion.div 
+                    initial={{ scale: 0.9, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className="w-full glass-card p-12 rounded-[3rem] border-white/10 bg-white/5 text-center space-y-8"
                 >
-                  <Sparkles className="w-5 h-5 mx-auto mb-2" />
-                  <span className="text-sm font-medium">AI Generator</span>
-                </button>
-                <button 
-                  onClick={() => setEmailMode("template")}
-                  className={`flex-1 py-3 rounded-xl border transition-all ${emailMode === 'template' ? 'bg-primary/20 border-primary/50 text-primary' : 'bg-transparent border-white/10 text-gray-400 hover:bg-white/5'}`}
-                >
-                  <Settings2 className="w-5 h-5 mx-auto mb-2" />
-                  <span className="text-sm font-medium">Saved Templates</span>
-                </button>
-                <button 
-                  onClick={() => setEmailMode("html")}
-                  className={`flex-1 py-3 rounded-xl border transition-all ${emailMode === 'html' ? 'bg-primary/20 border-primary/50 text-primary' : 'bg-transparent border-white/10 text-gray-400 hover:bg-white/5'}`}
-                >
-                  <Code className="w-5 h-5 mx-auto mb-2" />
-                  <span className="text-sm font-medium">Custom HTML</span>
-                </button>
-              </div>
-
-              {emailMode === "ai" && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 flex-1">
-                  <div className="flex flex-col gap-4">
+                    <div className="w-20 h-20 bg-primary/10 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
+                        <Sparkles className="w-10 h-10 text-primary animate-pulse" />
+                    </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-300 mb-2 block">Campaign Subject</label>
-                      <input type="text" className="w-full bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none" placeholder="e.g. Q3 Performance Update" />
+                        <h2 className="text-4xl font-black text-white mb-4">What should we create?</h2>
+                        <p className="text-gray-400 text-lg">Describe the email you want to send, and our AI will build a premium template for you.</p>
                     </div>
-                    <div className="flex-1 flex flex-col">
-                      <label className="text-sm font-medium text-gray-300 mb-2 block">What should the email say?</label>
-                      <textarea 
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        className="w-full flex-1 bg-black/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-primary focus:outline-none resize-none min-h-[200px]" 
-                        placeholder="Write a professional email announcing our new Q3 features. Mention {{name}} and their {{company}}."
-                      ></textarea>
-                    </div>
-                    <button 
-                      onClick={handleGenerate}
-                      disabled={isGenerating || !prompt}
-                      className="bg-white text-black font-medium py-3 rounded-xl hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
-                    >
-                      {isGenerating ? "Generating Magic..." : (
-                        <><Sparkles className="w-4 h-4" /> Generate HTML</>
-                      )}
-                    </button>
-                  </div>
-                  <div className="flex flex-col h-full">
-                    <label className="text-sm font-medium text-gray-300 mb-2 block">Live Preview</label>
-                    <div className="flex-1 bg-white rounded-xl border border-white/10 overflow-hidden relative">
-                      {htmlContent ? (
-                        <iframe srcDoc={htmlContent} className="w-full h-full bg-white" title="Email Preview" />
-                      ) : (
-                        <div className="absolute inset-0 flex items-center justify-center text-gray-400 bg-[#09090b]">
-                          <p className="text-sm">Preview will appear here</p>
+                    <div className="relative group">
+                        <textarea 
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            className="w-full bg-black/40 border-2 border-white/5 rounded-3xl p-8 text-xl text-white placeholder:text-gray-700 focus:border-primary focus:outline-none transition-all resize-none h-[180px] shadow-inner"
+                            placeholder="e.g. A colorful thank you email for hackathon participants with a premium card vibe..."
+                        />
+                        <div className="absolute right-4 bottom-4">
+                            <button 
+                                onClick={handleGenerate}
+                                disabled={isGenerating || !prompt}
+                                className="bg-primary hover:bg-primary/90 text-white font-black px-10 py-4 rounded-2xl transition-all flex items-center gap-2 shadow-[0_0_40px_rgba(99,102,241,0.3)] disabled:opacity-30 active:scale-95"
+                            >
+                                {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : (
+                                    <><Sparkles className="w-5 h-5" /> Generate</>
+                                )}
+                            </button>
                         </div>
-                      )}
                     </div>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          )}
+                    <div className="flex items-center justify-center gap-4 pt-4">
+                        <button className="text-gray-500 hover:text-white transition-colors flex items-center gap-2 text-sm font-bold"><Settings2 className="w-4 h-4" /> Use Template</button>
+                        <div className="w-1 h-1 rounded-full bg-gray-800" />
+                        <button onClick={startFromScratch} className="text-gray-500 hover:text-white transition-colors flex items-center gap-2 text-sm font-bold"><Code className="w-4 h-4" /> Start from HTML</button>
+                    </div>
+                </motion.div>
+              </div>
+            ) : (
+              /* Generated State: Studio View */
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex-1 flex flex-col lg:flex-row gap-6 overflow-hidden"
+              >
+                {/* Left: Control Panel */}
+                <div className="w-full lg:w-[400px] flex flex-col gap-6">
+                    {/* Prompt & Re-generate */}
+                    <div className="glass-card p-6 rounded-[2.5rem] border-white/10 bg-white/5 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black text-primary uppercase tracking-widest">Generation Prompt</span>
+                            <button onClick={() => setIsEditing(false)} className="text-[10px] font-black text-gray-500 hover:text-white uppercase transition-colors tracking-widest flex items-center gap-1"><ChevronLeft className="w-3 h-3" /> New</button>
+                        </div>
+                        <textarea 
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                            className="w-full bg-black/40 border border-white/5 rounded-2xl p-4 text-sm text-gray-300 focus:outline-none resize-none h-[100px]"
+                        />
+                        <button 
+                            onClick={handleGenerate}
+                            disabled={isGenerating || !prompt}
+                            className="w-full bg-white/5 border border-white/10 text-white font-bold py-3 rounded-xl hover:bg-white/10 transition-all flex items-center justify-center gap-2"
+                        >
+                             {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Sparkles className="w-4 h-4" /> Re-generate</>}
+                        </button>
+                    </div>
 
-          {currentStep === 2 && (
-            <motion.div
-              key="step2"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <h2 className="text-xl font-bold text-white mb-4">Upload Dynamic Assets</h2>
-              <p className="text-gray-400 text-sm mb-8">Upload up to 3 groups of assets (e.g., personalized certificates, QR codes). These can be dynamically attached or embedded in your emails using variables.</p>
+                    {/* View Settings */}
+                    <div className="glass-card p-6 rounded-[2.5rem] border-white/10 bg-white/5 flex-1 flex flex-col gap-6 shadow-xl">
+                        <div className="space-y-4">
+                            <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block">Preview Options</span>
+                            <div className="flex bg-black/20 p-1 rounded-2xl border border-white/5">
+                                <button onClick={() => setPreviewDevice("desktop")} className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-xl transition-all ${previewDevice === 'desktop' ? 'bg-primary text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>
+                                    <Monitor className="w-5 h-5" />
+                                    <span className="text-[10px] font-bold">Desktop</span>
+                                </button>
+                                <button onClick={() => setPreviewDevice("tablet")} className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-xl transition-all ${previewDevice === 'tablet' ? 'bg-primary text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>
+                                    <Tablet className="w-5 h-5" />
+                                    <span className="text-[10px] font-bold">Tablet</span>
+                                </button>
+                                <button onClick={() => setPreviewDevice("mobile")} className={`flex-1 flex flex-col items-center gap-2 py-3 rounded-xl transition-all ${previewDevice === 'mobile' ? 'bg-primary text-white shadow-lg' : 'text-gray-500 hover:text-gray-300'}`}>
+                                    <Smartphone className="w-5 h-5" />
+                                    <span className="text-[10px] font-bold">Mobile</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Scale Preview</span>
+                                <span className="text-[10px] font-bold text-primary">{Math.round(previewScale * 100)}%</span>
+                            </div>
+                            <input 
+                                type="range" min="0.4" max="1" step="0.01" 
+                                value={previewScale} onChange={(e) => setPreviewScale(parseFloat(e.target.value))}
+                                className="w-full h-1.5 bg-black/40 rounded-full appearance-none cursor-pointer accent-primary"
+                            />
+                        </div>
+
+                        <div className="flex-1" />
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <button 
+                                onClick={() => setShowCode(!showCode)}
+                                className={`flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs transition-all border ${showCode ? 'bg-primary border-primary text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                            >
+                                <Code className="w-4 h-4" /> {showCode ? "Hide Code" : "Show Code"}
+                            </button>
+                            <button onClick={copyCode} className="flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 transition-all">
+                                <Copy className="w-4 h-4" /> Copy HTML
+                            </button>
+                        </div>
+
+                        <button 
+                            onClick={nextStep}
+                            className="w-full bg-white text-black font-black py-5 rounded-[1.5rem] hover:bg-gray-200 transition-all flex items-center justify-center gap-2 shadow-2xl active:scale-[0.98]"
+                        >
+                            Next Step <ChevronRight className="w-5 h-5" />
+                        </button>
+                    </div>
+                </div>
+
+                {/* Right: Preview & Editor Area */}
+                <div className="flex-1 flex flex-col gap-6 overflow-hidden">
+                    <AnimatePresence>
+                        {showCode && (
+                            <motion.div 
+                                initial={{ height: 0, opacity: 0 }}
+                                animate={{ height: "45%", opacity: 1 }}
+                                exit={{ height: 0, opacity: 0 }}
+                                className="glass-card border-white/10 bg-[#0c0c0e] rounded-[2.5rem] overflow-hidden flex flex-col shadow-2xl relative group"
+                            >
+                                <div className="px-6 py-3 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                                    <div className="flex items-center gap-2">
+                                        <Code className="w-3.5 h-3.5 text-primary" />
+                                        <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest">Live HTML Editor</span>
+                                    </div>
+                                    <div className="flex items-center gap-4">
+                                        <button onClick={() => setHtmlContent("")} className="text-[10px] font-black text-red-500/50 hover:text-red-500 uppercase transition-colors tracking-widest flex items-center gap-1"><Trash2 className="w-3 h-3" /> Clear</button>
+                                        <div className="flex gap-1.5">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-red-500/30" />
+                                            <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/30" />
+                                            <div className="w-2.5 h-2.5 rounded-full bg-green-500/30" />
+                                        </div>
+                                    </div>
+                                </div>
+                                <textarea 
+                                    spellCheck={false}
+                                    value={htmlContent}
+                                    onChange={(e) => setHtmlContent(e.target.value)}
+                                    className="flex-1 w-full bg-transparent p-6 text-sm font-mono text-gray-400 focus:outline-none resize-none custom-scrollbar leading-relaxed"
+                                    placeholder="Paste your HTML here..."
+                                />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    <div className="flex-1 glass-card border-white/10 bg-white rounded-[3.5rem] overflow-hidden relative shadow-2xl">
+                        <div className="absolute inset-0 bg-[#f8f9fa] overflow-auto custom-scrollbar flex items-start justify-center p-12">
+                             <motion.div 
+                                animate={{ width: getDeviceWidth() }}
+                                transition={{ type: "spring", stiffness: 200, damping: 25 }}
+                                style={{ scale: previewScale, transformOrigin: "top center" }}
+                                className="min-h-full bg-white shadow-[0_40px_100px_rgba(0,0,0,0.1)] rounded-2xl overflow-hidden border border-gray-100"
+                            >
+                                <iframe srcDoc={htmlContent} className="w-full h-[1500px] border-none" title="Email Preview" />
+                            </motion.div>
+                        </div>
+                    </div>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
+
+        {currentStep === 2 && (
+          <motion.div
+            key="step2"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-8"
+          >
+             <div className="text-center max-w-2xl mx-auto">
+                <h2 className="text-3xl font-black text-white mb-4">Upload Assets</h2>
+                <p className="text-gray-400">Personalize your campaign with certificates, QR codes, or unique attachments.</p>
+             </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="border border-dashed border-white/20 rounded-2xl p-6 flex flex-col items-center justify-center text-center hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer group">
-                    <div className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center mb-4 group-hover:bg-primary/20 transition-colors">
-                      <ImageIcon className="w-6 h-6 text-gray-400 group-hover:text-primary transition-colors" />
+                  <div key={i} className="glass-card border-white/10 bg-white/5 rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group">
+                    <div className="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-all rotate-3 group-hover:rotate-0">
+                      <ImageIcon className="w-8 h-8 text-gray-400 group-hover:text-primary transition-all" />
                     </div>
-                    <h3 className="font-medium text-white mb-1">Asset Group {i}</h3>
-                    <p className="text-xs text-gray-500 mb-4">Click or drag folder to upload</p>
-                    <span className="text-xs text-primary bg-primary/10 px-2 py-1 rounded-md">Use variable: {`{{asset${i}}}`}</span>
+                    <h3 className="text-xl font-bold text-white mb-2">Group {i}</h3>
+                    <p className="text-sm text-gray-500 mb-6">Drop folders or click to browse</p>
+                    <span className="text-[10px] font-black text-primary bg-primary/10 px-4 py-2 rounded-full tracking-[0.1em] uppercase border border-primary/20">Variable: {`{{asset${i}}}`}</span>
                   </div>
                 ))}
               </div>
-            </motion.div>
-          )}
+              <div className="flex justify-between items-center bg-white/5 p-6 rounded-[2rem] border border-white/10">
+                <button onClick={prevStep} className="text-gray-400 font-bold px-6 py-2 hover:text-white transition-colors">Go Back</button>
+                <button onClick={nextStep} className="bg-white text-black font-black px-10 py-4 rounded-2xl hover:bg-gray-200 transition-all">Next: Recipients</button>
+              </div>
+          </motion.div>
+        )}
 
-          {currentStep === 3 && (
-            <motion.div
-              key="step3"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-            >
-              <h2 className="text-xl font-bold text-white mb-4">Upload Recipients List</h2>
-              <p className="text-gray-400 text-sm mb-8">Upload an Excel (.xlsx) file containing your recipient data.</p>
+        {currentStep === 3 && (
+          <motion.div
+            key="step3"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-8"
+          >
+              <div className="text-center max-w-2xl mx-auto">
+                <h2 className="text-3xl font-black text-white mb-4">Recipient Data</h2>
+                <p className="text-gray-400">Import your database using Excel.</p>
+              </div>
               
-              <div className="border border-dashed border-white/20 rounded-2xl p-12 flex flex-col items-center justify-center text-center hover:border-primary/50 hover:bg-primary/5 transition-colors cursor-pointer group">
-                <FileSpreadsheet className="w-16 h-16 text-gray-400 group-hover:text-primary mb-6 transition-colors" />
-                <h3 className="text-lg font-medium text-white mb-2">Drag and drop your Excel file here</h3>
-                <p className="text-sm text-gray-500 mb-6">Must include "Email" and "Name" columns.</p>
-                <button className="bg-white/10 text-white px-6 py-2 rounded-xl text-sm font-medium hover:bg-white/20 transition-colors">
-                  Browse Files
+              <div className="glass-card border-dashed border-white/10 bg-white/5 rounded-[3rem] p-20 flex flex-col items-center justify-center text-center hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group">
+                <div className="w-24 h-24 bg-primary/10 rounded-[2rem] flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                  <FileSpreadsheet className="w-12 h-12 text-primary" />
+                </div>
+                <h3 className="text-2xl font-black text-white mb-2">Select Spreadsheet</h3>
+                <p className="text-gray-400 mb-8 max-w-sm">Requires "Email" and "Name" columns.</p>
+                <button className="bg-primary text-white px-10 py-4 rounded-2xl font-black hover:bg-primary/90 transition-all shadow-2xl">
+                  Browse .xlsx Files
                 </button>
               </div>
 
-              <div className="mt-8 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-start gap-3">
-                <Settings2 className="w-5 h-5 text-blue-400 shrink-0 mt-0.5" />
-                <div>
-                  <h4 className="text-sm font-medium text-blue-400 mb-1">Row-by-Row Validation Active</h4>
-                  <p className="text-xs text-blue-400/80">When you upload, our system will automatically scan each row for missing data to ensure high deliverability.</p>
+              <div className="flex justify-between items-center bg-white/5 p-6 rounded-[2rem] border border-white/10">
+                <button onClick={prevStep} className="text-gray-400 font-bold px-6 py-2 hover:text-white transition-colors">Go Back</button>
+                <button onClick={nextStep} className="bg-white text-black font-black px-10 py-4 rounded-2xl hover:bg-gray-200 transition-all">Review Campaign</button>
+              </div>
+          </motion.div>
+        )}
+
+        {currentStep === 4 && (
+          <motion.div
+            key="step4"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="text-center space-y-8 py-12"
+          >
+              <div className="relative inline-block">
+                <div className="absolute inset-0 bg-green-500 blur-3xl opacity-20 animate-pulse" />
+                <div className="relative w-32 h-32 bg-green-500/20 rounded-[3rem] flex items-center justify-center mx-auto mb-8 border border-green-500/30">
+                    <CheckCircle2 className="w-16 h-16 text-green-500" />
                 </div>
               </div>
-            </motion.div>
-          )}
-
-          {currentStep === 4 && (
-            <motion.div
-              key="step4"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="text-center"
-            >
-              <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                <CheckCircle2 className="w-10 h-10 text-green-500" />
+              <div>
+                <h2 className="text-5xl font-black text-white mb-4 tracking-tight">Ready for Blast-off</h2>
+                <p className="text-gray-400 text-lg max-w-md mx-auto">Campaign is validated and ready for delivery.</p>
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">Ready to Send!</h2>
-              <p className="text-gray-400 mb-8 max-w-md mx-auto">Your campaign has been successfully validated. 4,200 recipients are queued for delivery.</p>
               
-              <div className="flex justify-center gap-4">
+              <div className="flex flex-col sm:flex-row justify-center gap-4 max-w-md mx-auto pt-8">
                 <button 
-                    onClick={() => toast.info("Test email sent to your inbox!")}
-                    className="bg-white/10 text-white px-8 py-3 rounded-xl font-medium hover:bg-white/20 transition-colors"
+                    onClick={() => toast.info("Test email sent!")}
+                    className="flex-1 bg-white/5 border border-white/10 text-white px-8 py-5 rounded-2xl font-bold hover:bg-white/10 transition-all"
                 >
-                  Send Test Email
+                  Send Test
                 </button>
                 <button 
-                    onClick={handleStartCampaign}
-                    className="bg-primary text-white px-8 py-3 rounded-xl font-medium hover:bg-primary/90 transition-colors shadow-lg flex items-center gap-2"
+                    onClick={() => toast.success("Campaign launched!")}
+                    className="flex-1 bg-primary text-white px-8 py-5 rounded-2xl font-black hover:bg-primary/90 transition-all shadow-[0_0_40px_rgba(99,102,241,0.4)] flex items-center justify-center gap-3"
                 >
-                  <Send className="w-4 h-4" /> Start Campaign
+                  <Send className="w-5 h-5" /> Launch Now
                 </button>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      {/* Footer Navigation */}
-      <div className="flex justify-between mt-8">
-        <button 
-          onClick={prevStep}
-          disabled={currentStep === 1}
-          className="px-6 py-3 rounded-xl font-medium text-gray-400 hover:text-white disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
-        >
-          Back
-        </button>
-        <button 
-          onClick={nextStep}
-          className={`px-6 py-3 rounded-xl font-medium flex items-center gap-2 transition-colors ${
-            currentStep === 4 ? "hidden" : "bg-white text-black hover:bg-gray-200"
-          }`}
-        >
-          Next Step <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
+              <button onClick={prevStep} className="text-gray-500 font-bold hover:text-white transition-colors">Back to Setup</button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

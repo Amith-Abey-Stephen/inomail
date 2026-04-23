@@ -30,29 +30,34 @@ export async function POST(req: Request) {
 
     // 3. Construct Prompt
     const structuredPrompt = `
-You are a world-class email designer and HTML developer. 
-Create a "WOW" factor, premium HTML email template. 
+You are a world-class HTML email developer specializing in **Legacy Table-Based Layouts** for 100% alignment stability across all clients (Outlook, Gmail, Apple Mail).
+Create a stunning, high-end "WOW" factor email template using bulletproof email coding techniques.
 
-Creative Guidelines:
-1. **Dynamic Aesthetics**: Do NOT stick to a single color theme. Choose a palette that perfectly fits the prompt (e.g., Bold Dark with neons, Elegant Light with pastels, Modern Corporate with gradients, or Vibrant & Playful).
-2. **Premium Elements**: Use sophisticated design features like:
-   - High-end typography hierarchy (-apple-system, Arial).
-   - Horizontal gradient accent lines or backgrounds.
-   - Padded content blocks with subtle borders or tinted backgrounds.
-   - Elegant quote blocks or callouts with accent side-borders.
-   - Luxury touches like increased letter-spacing for sub-headers and generous whitespace.
-3. **Strict Mobile Responsiveness**: Content MUST be 100% responsive. 
-   - Use the viewport meta tag: <meta name="viewport" content="width=device-width, initial-scale=1.0">.
-   - Use a 'Fluid-Hybrid' approach: All main containers and tables must have 'width: 100% !important' with a 'max-width: 600px' (or 640px) constraint.
-   - Use @media queries to adjust padding, font-sizes, and stack multi-column layouts on screens smaller than 600px.
-   - **CRITICAL**: Content must NEVER be cutoff; it must reflow to fit the device width perfectly.
+Aesthetic Categories (Choose one):
+- **Midnight Neon**: Deep #020617 bg, neon accents (#FBBF24, #10B981).
+- **Luxury Minimal**: White/light-gray bg, gold/copper accents, serif fonts.
+- **Modern Glass**: Layered transparent effects with soft borders.
+- **Vibrant Gradient**: Bold linear gradients for buttons/accents.
 
-Technical Requirements:
-1. Return ONLY raw HTML code (no markdown, no preambles).
-2. **CSS**: Use primarily **inline CSS** for maximum compatibility. You may use **internal CSS** in a <style> block for hover effects, transitions, and media queries.
-3. **Variables**: Naturally integrate {{variable_name}} for ${variables.length > 0 ? variables.map((v: string) => `{{${v}}}`).join(', ') : "None"}.
-4. **Content Flow**: Header -> Hero Section -> Body -> Highlight/Quote Block -> High-contrast CTA -> Professional Footer.
+Technical Stability Requirements (CRITICAL):
+1. **Bulletproof Tables**: Use ONLY <table>, <tr>, and <td> for the core structure. Avoid <div> for layouts as they break alignment in Outlook.
+2. **Alignment Attributes**: Use 'align="center"' on tables and 'align="left/center/right"' on <td> cells. Use 'valign="top"' for vertical alignment.
+3. **Strict Inline CSS**: Every single element must have its styles applied via the 'style' attribute. DO NOT rely on internal <style> blocks for core layout or alignment.
+4. **Spacing**: Use 'cellpadding="0"' and 'cellspacing="0"'. Use <td> with specific padding or heights for spacing instead of margins (which are unreliable).
+5. **Fluid & Responsive**: 
+   - Main wrapper table: width="100%".
+   - Content container table: width="100%", style="max-width: 600px;".
+   - Images: style="display: block; width: 100%; height: auto; max-width: 100%;".
+   - Include: <meta name="viewport" content="width=device-width, initial-scale=1.0">.
 
+Design Principles:
+- Use rounded corners (24px-32px) via 'border-radius' (with <td> fallbacks if possible).
+- Generous internal padding (40px+) inside content cells.
+- Premium typography hierarchy.
+- Content must NEVER be cutoff or misaligned.
+
+Return ONLY raw HTML code (no markdown, no preambles).
+Variables: Naturally integrate {{variable_name}} for ${variables.length > 0 ? variables.map((v: string) => `{{${v}}}`).join(', ') : "None"}.
 Tone: ${tone}
 Prompt: "${prompt}"
 `;
@@ -67,12 +72,12 @@ Prompt: "${prompt}"
         "X-Title": "InoMail",
       },
       body: JSON.stringify({
-        model: "meta-llama/llama-3.3-70b-instruct", // High performance Llama 3.3 model
+        model: "meta-llama/llama-3.3-70b-instruct",
         messages: [
-          { role: "system", content: "You are a specialized HTML email template generator." },
+          { role: "system", content: "You are an expert HTML email developer. You produce clean, table-based, fully inlined HTML emails that look perfect in Outlook and Gmail." },
           { role: "user", content: structuredPrompt }
         ],
-        temperature: 0.7,
+        temperature: 0.7, // Lower temperature slightly for more consistent table structure
       }),
     });
 
@@ -84,8 +89,6 @@ Prompt: "${prompt}"
     }
 
     let htmlContent = data.choices[0].message.content;
-
-    // 5. Clean up markdown artifacts if the model disobeys
     htmlContent = htmlContent.replace(/^```html\s*/, "").replace(/\s*```$/, "");
 
     return NextResponse.json({ html: htmlContent }, { status: 200 });

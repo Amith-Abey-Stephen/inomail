@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { v2 as cloudinary } from "cloudinary";
 import { verifyToken, UserPayload } from "@/lib/auth";
+import connectDB from "@/lib/db/connect";
+import Organization from "@/models/Organization";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -18,6 +20,11 @@ export async function POST(req: Request) {
     const user = verifyToken(token) as UserPayload;
     if (!user) return NextResponse.json({ error: "Invalid token" }, { status: 401 });
 
+    // Fetch Organization to get the name/slug
+    await connectDB();
+    const org = await Organization.findById(user.organizationId);
+    const orgPath = org?.slug || org?.name?.toLowerCase().replace(/\s+/g, '-') || user.organizationId;
+
     const formData = await req.formData();
     const file = formData.get("file") as File | null;
     const groupName = formData.get("groupName") as string | null;
@@ -29,10 +36,10 @@ export async function POST(req: Request) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Upload to Cloudinary using a stream
+    // Upload to Cloudinary using a stream with the new folder structure
     const uploadResult: any = await new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: `inomail/${user.organizationId}/${groupName || 'general'}` },
+        { folder: `inomail/${orgPath}/${groupName || 'general'}` },
         (error, result) => {
           if (error) reject(error);
           else resolve(result);

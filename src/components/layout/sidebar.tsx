@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, MailPlus, History, Building2, Settings, LogOut } from "lucide-react";
+import { LayoutDashboard, MailPlus, History, Building2, Settings, LogOut, Layout, FileText } from "lucide-react";
 import { motion } from "framer-motion";
 import { OrgSwitcher } from "@/components/dashboard/OrgSwitcher";
 
@@ -12,6 +12,8 @@ export function Sidebar() {
   const links = [
     { name: "Overview", href: "/admin/dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
     { name: "Send Email", href: "/admin/send", icon: <MailPlus className="w-5 h-5" /> },
+    { name: "Templates", href: "/admin/templates", icon: <Layout className="w-5 h-5" /> },
+    { name: "Drafts", href: "/admin/drafts", icon: <FileText className="w-5 h-5" /> },
     { name: "History", href: "/admin/history", icon: <History className="w-5 h-5" /> },
     { name: "Organization", href: "/admin/organization", icon: <Building2 className="w-5 h-5" /> },
     { name: "Settings", href: "/admin/settings", icon: <Settings className="w-5 h-5" /> },

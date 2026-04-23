@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, FileSpreadsheet, Send, Settings2, Code, Image as ImageIcon, CheckCircle2, ChevronRight, Copy, Loader2, Monitor, Smartphone, Tablet, ChevronLeft, Layout, Trash2 } from "lucide-react";
+import { Sparkles, FileSpreadsheet, Send, Settings2, Code, Image as ImageIcon, CheckCircle2, ChevronRight, Copy, Loader2, Monitor, Smartphone, Tablet, ChevronLeft, Layout, Trash2, MousePointer2, Save, FileText } from "lucide-react";
 import { toast } from "sonner";
 
 type Step = 1 | 2 | 3 | 4;
@@ -16,6 +16,26 @@ export default function SendEmailPage() {
   const [previewScale, setPreviewScale] = useState(0.85);
   const [previewDevice, setPreviewDevice] = useState<"desktop" | "tablet" | "mobile">("desktop");
   const [showCode, setShowCode] = useState(true);
+  const [visualEditMode, setVisualEditMode] = useState(true);
+  const [showExitModal, setShowExitModal] = useState(false);
+  const [assets, setAssets] = useState<{ [key: string]: { url: string; name: string; loading: boolean } }>({
+    "1": { url: "", name: "", loading: false },
+    "2": { url: "", name: "", loading: false },
+    "3": { url: "", name: "", loading: false },
+  });
+  
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+
+  // Handle messages from the visual editor inside the iframe
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data.type === "HTML_UPDATE") {
+        setHtmlContent(event.data.html);
+      }
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   const handleGenerate = async () => {
     if (!prompt) return;
@@ -51,11 +71,36 @@ export default function SendEmailPage() {
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, 4) as Step);
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1) as Step);
 
+  const handleFileUpload = async (groupKey: string, file: File) => {
+    setAssets(prev => ({ ...prev, [groupKey]: { ...prev[groupKey], loading: true } }));
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("groupName", `group-${groupKey}`);
+
+    const toastId = toast.loading(`Uploading asset to Group ${groupKey}...`);
+    try {
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setAssets(prev => ({ ...prev, [groupKey]: { url: data.url, name: data.name, loading: false } }));
+        toast.success(`Successfully uploaded to Group ${groupKey}!`, { id: toastId });
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (err: any) {
+      setAssets(prev => ({ ...prev, [groupKey]: { ...prev[groupKey], loading: false } }));
+      toast.error(err.message || "Upload failed", { id: toastId });
+    }
+  };
+
   const getDeviceWidth = () => {
     switch (previewDevice) {
       case "mobile": return "375px";
       case "tablet": return "768px";
-      case "desktop": return "1440px";
+      case "desktop": return "1600px";
       default: return "100%";
     }
   };
@@ -81,8 +126,173 @@ export default function SendEmailPage() {
     setShowCode(true);
   };
 
+  // Wrap HTML with visual editor script
+  const getVisualEditorHtml = (rawHtml: string) => {
+    if (!visualEditMode) return rawHtml;
+    
+    const script = `
+      <script>
+        document.addEventListener('DOMContentLoaded', () => {
+          // Make all text elements editable
+          const elements = document.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, div, b, i, strong, em, a, li');
+          elements.forEach(el => {
+            if (el.children.length === 0 || Array.from(el.childNodes).some(n => n.nodeType === 3)) {
+              el.contentEditable = 'true';
+              el.style.outline = 'none';
+              
+              // Hover effect
+              el.addEventListener('mouseover', (e) => {
+                e.stopPropagation();
+                el.style.backgroundColor = 'rgba(99, 102, 241, 0.05)';
+                el.style.boxShadow = '0 0 0 1px rgba(99, 102, 241, 0.2)';
+              });
+              el.addEventListener('mouseout', () => {
+                el.style.backgroundColor = '';
+                el.style.boxShadow = '';
+              });
+            }
+          });
+
+          // Sync changes back to parent
+          let timeout;
+          document.body.addEventListener('input', () => {
+            clearTimeout(timeout);
+            timeout = setTimeout(() => {
+              // Clean up before sending back
+              const clone = document.documentElement.cloneNode(true);
+              clone.querySelectorAll('[contenteditable]').forEach(el => {
+                el.removeAttribute('contenteditable');
+                el.removeAttribute('style');
+              });
+              window.parent.postMessage({ type: 'HTML_UPDATE', html: '<!DOCTYPE html>\\n' + clone.outerHTML }, '*');
+            }, 500);
+          });
+        });
+      </script>
+    `;
+
+    if (rawHtml.includes('</body>')) {
+      return rawHtml.replace('</body>', `${script}</body>`);
+    }
+    return rawHtml + script;
+  };
+
+  const handleSaveTemplate = async () => {
+    const name = window.prompt("Enter a name for this template:", "New Template");
+    if (!name) return;
+
+    const toastId = toast.loading("Saving as template...");
+    try {
+      const res = await fetch("/api/templates/save", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, htmlContent, category: "Custom" })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Design saved to Templates!", { id: toastId });
+      } else {
+        toast.error(data.error || "Failed to save template", { id: toastId });
+      }
+    } catch (err) {
+      toast.error("Failed to save template", { id: toastId });
+    }
+  };
+
+  const handleSaveDraft = async () => {
+    const name = window.prompt("Enter a name for this draft:", "New Campaign Draft");
+    if (!name) return;
+
+    const toastId = toast.loading("Saving draft...");
+    try {
+      const res = await fetch("/api/campaigns/save-draft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          name, 
+          subject: "Draft Campaign", 
+          htmlContent,
+          assets: Object.values(assets).filter(a => a.url).map((a, i) => ({
+            groupName: `Group ${i + 1}`,
+            files: [{ url: a.url, name: a.name }]
+          }))
+        })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        toast.success("Draft saved successfully!", { id: toastId });
+        setIsEditing(false);
+        setShowExitModal(false);
+      } else {
+        toast.error(data.error || "Failed to save draft", { id: toastId });
+      }
+    } catch (err) {
+      toast.error("Failed to save draft", { id: toastId });
+    }
+  };
+
+  const discardAndExit = () => {
+    setIsEditing(false);
+    setShowExitModal(false);
+    setHtmlContent("");
+    setPrompt("");
+    setAssets({
+      "1": { url: "", name: "", loading: false },
+      "2": { url: "", name: "", loading: false },
+      "3": { url: "", name: "", loading: false },
+    });
+  };
+
   return (
-    <div className="max-w-[1600px] mx-auto pb-20 px-4">
+    <div className="max-w-[1600px] mx-auto pb-20 px-4 relative">
+      {/* Exit Confirmation Modal */}
+      <AnimatePresence>
+        {showExitModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShowExitModal(false)}
+                    className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                />
+                <motion.div 
+                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                    className="relative w-full max-w-md glass-card p-8 rounded-[2.5rem] border-white/10 bg-[#0c0c0e] shadow-2xl text-center"
+                >
+                    <div className="w-16 h-16 bg-yellow-500/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                        <Layout className="w-8 h-8 text-yellow-500" />
+                    </div>
+                    <h3 className="text-2xl font-black text-white mb-2">Unsaved Changes</h3>
+                    <p className="text-gray-400 text-sm mb-8">You are about to leave the studio. What would you like to do with your current design?</p>
+                    
+                    <div className="space-y-3">
+                        <button 
+                            onClick={handleSaveDraft}
+                            className="w-full bg-primary text-white font-black py-4 rounded-xl hover:bg-primary/90 transition-all shadow-lg"
+                        >
+                            Save Draft & Exit
+                        </button>
+                        <button 
+                            onClick={discardAndExit}
+                            className="w-full bg-white/5 border border-white/10 text-red-400 font-bold py-4 rounded-xl hover:bg-red-500/10 hover:border-red-500/20 transition-all"
+                        >
+                            Discard & Exit
+                        </button>
+                        <button 
+                            onClick={() => setShowExitModal(false)}
+                            className="w-full bg-transparent text-gray-500 font-medium py-2 hover:text-white transition-colors"
+                        >
+                            Cancel
+                        </button>
+                    </div>
+                </motion.div>
+            </div>
+        )}
+      </AnimatePresence>
+
       {/* Header & Stepper */}
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-6">
         <div>
@@ -114,7 +324,6 @@ export default function SendEmailPage() {
             className="flex flex-col h-[calc(100vh-250px)] min-h-[700px]"
           >
             {!isEditing ? (
-              /* Initial State: Big Prompt Box */
               <div className="flex-1 flex flex-col items-center justify-center max-w-4xl mx-auto w-full">
                 <motion.div 
                     initial={{ scale: 0.9, opacity: 0 }}
@@ -155,7 +364,6 @@ export default function SendEmailPage() {
                 </motion.div>
               </div>
             ) : (
-              /* Generated State: Studio View */
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -163,11 +371,10 @@ export default function SendEmailPage() {
               >
                 {/* Left: Control Panel */}
                 <div className="w-full lg:w-[400px] flex flex-col gap-6">
-                    {/* Prompt & Re-generate */}
                     <div className="glass-card p-6 rounded-[2.5rem] border-white/10 bg-white/5 space-y-4">
                         <div className="flex items-center justify-between">
                             <span className="text-[10px] font-black text-primary uppercase tracking-widest">Generation Prompt</span>
-                            <button onClick={() => setIsEditing(false)} className="text-[10px] font-black text-gray-500 hover:text-white uppercase transition-colors tracking-widest flex items-center gap-1"><ChevronLeft className="w-3 h-3" /> New</button>
+                            <button onClick={() => setShowExitModal(true)} className="text-[10px] font-black text-gray-500 hover:text-white uppercase transition-colors tracking-widest flex items-center gap-1"><ChevronLeft className="w-3 h-3" /> New</button>
                         </div>
                         <textarea 
                             value={prompt}
@@ -183,7 +390,6 @@ export default function SendEmailPage() {
                         </button>
                     </div>
 
-                    {/* View Settings */}
                     <div className="glass-card p-6 rounded-[2.5rem] border-white/10 bg-white/5 flex-1 flex flex-col gap-6 shadow-xl">
                         <div className="space-y-4">
                             <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block">Preview Options</span>
@@ -211,7 +417,7 @@ export default function SendEmailPage() {
                             <input 
                                 type="range" min="0.4" max="1" step="0.01" 
                                 value={previewScale} onChange={(e) => setPreviewScale(parseFloat(e.target.value))}
-                                className="w-full h-1.5 bg-black/40 rounded-full appearance-none cursor-pointer accent-primary"
+                                className="w-full h-1.5 bg-white/10 border border-white/5 rounded-full appearance-none cursor-pointer accent-primary"
                             />
                         </div>
 
@@ -219,8 +425,20 @@ export default function SendEmailPage() {
 
                         <div className="grid grid-cols-2 gap-3">
                             <button 
+                                onClick={() => setVisualEditMode(!visualEditMode)}
+                                className={`flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs transition-all border ${visualEditMode ? 'bg-primary border-primary text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                            >
+                                <MousePointer2 className="w-4 h-4" /> Visual Edit: {visualEditMode ? "ON" : "OFF"}
+                            </button>
+                            <button 
+                                onClick={handleSaveTemplate}
+                                className="flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 transition-all"
+                            >
+                                <Save className="w-4 h-4 text-primary" /> Save Template
+                            </button>
+                            <button 
                                 onClick={() => setShowCode(!showCode)}
-                                className={`flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs transition-all border ${showCode ? 'bg-primary border-primary text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                                className={`flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs transition-all border ${showCode ? 'bg-white/10 border-white/20 text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
                             >
                                 <Code className="w-4 h-4" /> {showCode ? "Hide Code" : "Show Code"}
                             </button>
@@ -279,9 +497,14 @@ export default function SendEmailPage() {
                                 animate={{ width: getDeviceWidth() }}
                                 transition={{ type: "spring", stiffness: 200, damping: 25 }}
                                 style={{ scale: previewScale, transformOrigin: "top center" }}
-                                className="min-h-full bg-white shadow-[0_40px_100px_rgba(0,0,0,0.1)] rounded-2xl overflow-hidden border border-gray-100"
+                                className="min-h-full bg-white shadow-[0_40px_100px_rgba(0,0,0,0.1)] rounded-2xl overflow-hidden border border-gray-100 flex-shrink-0"
                             >
-                                <iframe srcDoc={htmlContent} className="w-full h-[1500px] border-none" title="Email Preview" />
+                                <iframe 
+                                  ref={iframeRef}
+                                  srcDoc={getVisualEditorHtml(htmlContent)} 
+                                  className="w-full h-[1500px] border-none" 
+                                  title="Email Preview" 
+                                />
                             </motion.div>
                         </div>
                     </div>
@@ -305,14 +528,32 @@ export default function SendEmailPage() {
              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="glass-card border-white/10 bg-white/5 rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group">
-                    <div className="w-16 h-16 bg-white/5 rounded-3xl flex items-center justify-center mb-6 group-hover:bg-primary/20 transition-all rotate-3 group-hover:rotate-0">
-                      <ImageIcon className="w-8 h-8 text-gray-400 group-hover:text-primary transition-all" />
-                    </div>
-                    <h3 className="text-xl font-bold text-white mb-2">Group {i}</h3>
-                    <p className="text-sm text-gray-500 mb-6">Drop folders or click to browse</p>
-                    <span className="text-[10px] font-black text-primary bg-primary/10 px-4 py-2 rounded-full tracking-[0.1em] uppercase border border-primary/20">Variable: {`{{asset${i}}}`}</span>
+                {Object.keys(assets).map((key) => (
+                  <div key={key} className="relative group">
+                    <input 
+                      type="file" 
+                      id={`file-${key}`} 
+                      className="hidden" 
+                      onChange={(e) => e.target.files?.[0] && handleFileUpload(key, e.target.files[0])}
+                    />
+                    <label 
+                      htmlFor={`file-${key}`}
+                      className={`glass-card border-white/10 bg-white/5 rounded-[2.5rem] p-10 flex flex-col items-center justify-center text-center hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer h-full ${assets[key].url ? 'border-primary/50 bg-primary/5' : ''}`}
+                    >
+                      <div className={`w-16 h-16 rounded-3xl flex items-center justify-center mb-6 transition-all ${assets[key].url ? 'bg-primary/20' : 'bg-white/5 group-hover:bg-primary/20'}`}>
+                        {assets[key].loading ? <Loader2 className="w-8 h-8 text-primary animate-spin" /> : 
+                         assets[key].url ? <CheckCircle2 className="w-8 h-8 text-primary" /> :
+                         <ImageIcon className="w-8 h-8 text-gray-400 group-hover:text-primary transition-all" />
+                        }
+                      </div>
+                      <h3 className="text-xl font-bold text-white mb-2">Group {key}</h3>
+                      <p className="text-sm text-gray-500 mb-6 truncate max-w-full px-4">
+                        {assets[key].name || "Drop folders or click to browse"}
+                      </p>
+                      <span className={`text-[10px] font-black px-4 py-2 rounded-full tracking-[0.1em] uppercase border transition-all ${assets[key].url ? 'text-primary bg-primary/20 border-primary/20' : 'text-gray-500 border-white/10'}`}>
+                        Variable: {`{{asset${key}}}`}
+                      </span>
+                    </label>
                   </div>
                 ))}
               </div>

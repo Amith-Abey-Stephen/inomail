@@ -59,10 +59,10 @@ export function Sidebar() {
       </div>
 
       <div className="p-4 border-t border-white/10">
-        <Link href="/api/auth/logout" className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all w-full text-red-400 hover:bg-red-500/10 group">
+        <a href="/api/auth/logout" className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all w-full text-red-400 hover:bg-red-500/10 group">
           <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
           <span className="font-medium text-sm">Logout</span>
-        </Link>
+        </a>
       </div>
     </div>
   );

@@ -7,11 +7,8 @@ export async function GET(req: Request) {
   const response = NextResponse.redirect(new URL(redirectPath, req.url));
   
   // Clear the token cookie
-  response.cookies.set("token", "", {
-    httpOnly: true,
-    expires: new Date(0),
-    path: "/",
-  });
+  response.cookies.delete("token");
+  response.cookies.delete("user");
   
   return response;
 }

@@ -82,7 +82,7 @@ export default function SettingsPage() {
 
   const handleSave = async (silent = false) => {
     setSaving(true);
-    const toastId = !silent ? toast.loading("Saving changes...") : null;
+    const toastId = !silent ? toast.loading("Saving changes...") : undefined;
     try {
       const res = await fetch("/api/org/settings", {
         method: "POST",
@@ -182,7 +182,7 @@ export default function SettingsPage() {
         <div className="flex items-center gap-4">
             {isDirty && <span className="text-[10px] font-black text-yellow-500 uppercase tracking-widest animate-pulse flex items-center gap-1.5"><AlertTriangle className="w-3 h-3" /> Unsaved Changes</span>}
             <button 
-                onClick={handleSave}
+                onClick={() => handleSave()}
                 disabled={saving || !isDirty}
                 className="bg-primary text-white px-8 py-3 rounded-2xl font-black text-sm hover:bg-primary/90 transition-all shadow-[0_0_30px_rgba(99,102,241,0.3)] disabled:opacity-50 active:scale-95 flex items-center gap-2"
             >
@@ -353,7 +353,7 @@ export default function SettingsPage() {
                 </div>
                 <div className="h-8 w-[1px] bg-black/10 mx-2" />
                 <button 
-                    onClick={handleSave}
+                    onClick={() => handleSave()}
                     disabled={saving}
                     className="bg-black text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black/80 transition-all"
                 >

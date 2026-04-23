@@ -31,12 +31,30 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "User with this email already exists" }, { status: 400 });
     }
 
-    // 2. Check org member limit
+    // 2. Check org member limit and sync plan if needed
     const org = await Organization.findById(currentUser.organizationId);
     if (!org) return NextResponse.json({ error: "Organization not found" }, { status: 404 });
 
+    // Auto-sync limits based on plan string (Self-healing logic)
+    const planLimits = {
+      Starter: { maxEmailsPerDay: 100, maxMembers: 1 },
+      Pro: { maxEmailsPerDay: 10000, maxMembers: 10 },
+      Enterprise: { maxEmailsPerDay: 999999, maxMembers: 999 },
+    };
+
+    const currentPlan = (org.plan || "Starter") as keyof typeof planLimits;
+    const targetLimits = planLimits[currentPlan];
+
+    if (org.rateLimit.maxMembers !== targetLimits.maxMembers || 
+        org.rateLimit.maxEmailsPerDay !== targetLimits.maxEmailsPerDay) {
+      org.rateLimit = targetLimits;
+      await org.save();
+    }
+
     if (org.members.length >= org.rateLimit.maxMembers) {
-      return NextResponse.json({ error: "Organization member limit reached. Please upgrade your plan." }, { status: 400 });
+      return NextResponse.json({ 
+        error: `Organization member limit reached (${org.rateLimit.maxMembers} seats). Please upgrade your plan.` 
+      }, { status: 400 });
     }
 
     // 3. Create user and associate with org

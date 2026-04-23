@@ -20,6 +20,9 @@ export interface ICampaign extends Document {
     groupName: string;
     files: { url: string; name: string }[];
   }[];
+  recipients: any[];
+  failedRecipients: any[];
+  successRecipients: any[];
   scheduledAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -57,6 +60,9 @@ const CampaignSchema = new Schema<ICampaign>(
         ]
       }
     ],
+    recipients: [Schema.Types.Mixed],
+    failedRecipients: [Schema.Types.Mixed],
+    successRecipients: [Schema.Types.Mixed],
     scheduledAt: { type: Date },
   },
   { timestamps: true }

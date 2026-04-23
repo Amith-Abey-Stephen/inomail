@@ -24,6 +24,9 @@ export default function SendEmailPage() {
   const [showSaveDraftModal, setShowSaveDraftModal] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [recipients, setRecipients] = useState<any[]>([]);
+  const [isLaunching, setIsLaunching] = useState(false);
+  const [launchStats, setLaunchStats] = useState<{ total: number; sent: number; failed: number } | null>(null);
+  const [failedList, setFailedList] = useState<any[]>([]);
   const [assets, setAssets] = useState<{ [key: string]: { url: string; name: string; loading: boolean } }>({
     "1": { url: "", name: "", loading: false },
     "2": { url: "", name: "", loading: false },
@@ -354,6 +357,52 @@ export default function SendEmailPage() {
       }
     };
     reader.readAsBinaryString(file);
+  };
+
+  const handleLaunch = async (retryList?: any[]) => {
+    const list = retryList || recipients;
+    if (list.length === 0) return;
+
+    setIsLaunching(true);
+    const toastId = toast.loading(retryList ? "Retrying failures..." : "Launching campaign...");
+    
+    try {
+        const res = await fetch("/api/email/launch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                name: prompt || "Untitled Campaign",
+                subject: "Important Update from InoMail", // Default subject
+                htmlContent,
+                recipients: list,
+                assets: Object.values(assets).filter(a => a.url).map((a, i) => ({
+                    groupName: `Group ${i + 1}`,
+                    files: [{ url: a.url, name: a.name }]
+                }))
+            })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+            setLaunchStats(data.stats);
+            setFailedList(data.failedRecipients || []);
+            toast.success("Campaign dispatch completed!", { id: toastId });
+        } else {
+            toast.error(data.error || "Launch failed", { id: toastId });
+        }
+    } catch (err) {
+        toast.error("Failed to connect to delivery server", { id: toastId });
+    } finally {
+        setIsLaunching(false);
+    }
+  };
+
+  const downloadFailedList = () => {
+    if (failedList.length === 0) return;
+    const worksheet = XLSX.utils.json_to_sheet(failedList);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Failed_Recipients");
+    XLSX.writeFile(workbook, "Failed_Recipients.xlsx");
   };
 
   const discardAndExit = () => {
@@ -760,32 +809,102 @@ export default function SendEmailPage() {
             exit={{ opacity: 0, x: -20 }}
             className="text-center space-y-8 py-12"
           >
-              <div className="relative inline-block">
-                <div className="absolute inset-0 bg-green-500 blur-3xl opacity-20 animate-pulse" />
-                <div className="relative w-32 h-32 bg-green-500/20 rounded-[3rem] flex items-center justify-center mx-auto mb-8 border border-green-500/30">
-                    <CheckCircle2 className="w-16 h-16 text-green-500" />
+              {!launchStats ? (
+                <>
+                    <div className="relative inline-block">
+                        <div className="absolute inset-0 bg-green-500 blur-3xl opacity-20 animate-pulse" />
+                        <div className="relative w-32 h-32 bg-green-500/20 rounded-[3rem] flex items-center justify-center mx-auto mb-8 border border-green-500/30">
+                            {isLaunching ? <Loader2 className="w-16 h-16 text-primary animate-spin" /> : <CheckCircle2 className="w-16 h-16 text-green-500" />}
+                        </div>
+                    </div>
+                    <div>
+                        <h2 className="text-5xl font-black text-white mb-4 tracking-tight">{isLaunching ? "Dispatching..." : "Ready for Blast-off"}</h2>
+                        <p className="text-gray-400 text-lg max-w-md mx-auto">
+                            {isLaunching ? "Please don't close this window while we send your emails." : `${recipients.length} recipients are validated and ready for delivery.`}
+                        </p>
+                    </div>
+                    
+                    <div className="flex flex-col sm:flex-row justify-center gap-4 max-w-md mx-auto pt-8">
+                        <button 
+                            disabled={isLaunching}
+                            onClick={() => toast.info("Test email sent!")}
+                            className="flex-1 bg-white/5 border border-white/10 text-white px-8 py-5 rounded-2xl font-bold hover:bg-white/10 transition-all disabled:opacity-30"
+                        >
+                        Send Test
+                        </button>
+                        <button 
+                            disabled={isLaunching || recipients.length === 0}
+                            onClick={() => handleLaunch()}
+                            className="flex-1 bg-primary text-white px-8 py-5 rounded-2xl font-black hover:bg-primary/90 transition-all shadow-[0_0_40px_rgba(99,102,241,0.4)] flex items-center justify-center gap-3 disabled:opacity-30"
+                        >
+                        {isLaunching ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Send className="w-5 h-5" /> Launch Now</>}
+                        </button>
+                    </div>
+                </>
+              ) : (
+                <div className="max-w-4xl mx-auto space-y-12">
+                    <div>
+                        <h2 className="text-4xl font-black text-white mb-2">Campaign Summary</h2>
+                        <p className="text-gray-400 font-medium">Results for {prompt || "Untitled Campaign"}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="glass-card p-8 rounded-[2rem] border-white/10 bg-white/5 flex flex-col items-center justify-center">
+                            <span className="text-xs font-black text-gray-500 uppercase tracking-widest mb-2">Total Processed</span>
+                            <span className="text-4xl font-black text-white">{launchStats.total}</span>
+                        </div>
+                        <div className="glass-card p-8 rounded-[2rem] border-green-500/10 bg-green-500/5 flex flex-col items-center justify-center">
+                            <span className="text-xs font-black text-green-500 uppercase tracking-widest mb-2">Successfully Sent</span>
+                            <span className="text-4xl font-black text-green-500">{launchStats.sent}</span>
+                        </div>
+                        <div className="glass-card p-8 rounded-[2rem] border-red-500/10 bg-red-500/5 flex flex-col items-center justify-center">
+                            <span className="text-xs font-black text-red-500 uppercase tracking-widest mb-2">Failed Deliveries</span>
+                            <span className="text-4xl font-black text-red-500">{launchStats.failed}</span>
+                        </div>
+                    </div>
+
+                    <div className="bg-white/5 border border-white/10 rounded-[2.5rem] p-10 flex flex-col items-center gap-6">
+                        {launchStats.failed > 0 ? (
+                            <>
+                                <div className="text-center">
+                                    <h3 className="text-xl font-bold text-white mb-2">Action Required: {launchStats.failed} Failures</h3>
+                                    <p className="text-gray-400 text-sm max-w-sm">Some emails couldn't be delivered. You can download the failed list or retry sending to them.</p>
+                                </div>
+                                <div className="flex gap-4">
+                                    <button 
+                                        onClick={downloadFailedList}
+                                        className="flex items-center gap-2 bg-white/5 border border-white/10 text-white px-8 py-4 rounded-xl font-bold hover:bg-white/10 transition-all"
+                                    >
+                                        <Download className="w-4 h-4" /> Download Failed List
+                                    </button>
+                                    <button 
+                                        onClick={() => handleLaunch(failedList)}
+                                        className="flex items-center gap-2 bg-primary text-white px-8 py-4 rounded-xl font-black hover:bg-primary/90 transition-all"
+                                    >
+                                        <Send className="w-4 h-4" /> Retry Failed Only
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="text-center">
+                                <div className="w-16 h-16 bg-green-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-green-500/30">
+                                    <CheckCircle2 className="w-8 h-8 text-green-500" />
+                                </div>
+                                <h3 className="text-xl font-bold text-white mb-2">Perfect Score!</h3>
+                                <p className="text-gray-400 text-sm">All emails were successfully dispatched to the target list.</p>
+                            </div>
+                        )}
+                    </div>
+
+                    <button 
+                        onClick={() => { setLaunchStats(null); setCurrentStep(1); setRecipients([]); }}
+                        className="text-gray-500 font-bold hover:text-white transition-colors"
+                    >
+                        Start New Campaign
+                    </button>
                 </div>
-              </div>
-              <div>
-                <h2 className="text-5xl font-black text-white mb-4 tracking-tight">Ready for Blast-off</h2>
-                <p className="text-gray-400 text-lg max-w-md mx-auto">Campaign is validated and ready for delivery.</p>
-              </div>
-              
-              <div className="flex flex-col sm:flex-row justify-center gap-4 max-w-md mx-auto pt-8">
-                <button 
-                    onClick={() => toast.info("Test email sent!")}
-                    className="flex-1 bg-white/5 border border-white/10 text-white px-8 py-5 rounded-2xl font-bold hover:bg-white/10 transition-all"
-                >
-                  Send Test
-                </button>
-                <button 
-                    onClick={() => toast.success("Campaign launched!")}
-                    className="flex-1 bg-primary text-white px-8 py-5 rounded-2xl font-black hover:bg-primary/90 transition-all shadow-[0_0_40px_rgba(99,102,241,0.4)] flex items-center justify-center gap-3"
-                >
-                  <Send className="w-5 h-5" /> Launch Now
-                </button>
-              </div>
-              <button onClick={prevStep} className="text-gray-500 font-bold hover:text-white transition-colors">Back to Setup</button>
+              )}
+              {!launchStats && <button onClick={prevStep} className="text-gray-500 font-bold hover:text-white transition-colors">Back to Setup</button>}
           </motion.div>
         )}
       </AnimatePresence>

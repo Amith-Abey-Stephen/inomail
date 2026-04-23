@@ -96,10 +96,11 @@ export default function TemplatesPage() {
             <div className={`aspect-[4/5] rounded-[2.5rem] bg-gradient-to-br ${getTemplateColor(idx)} border border-white/10 overflow-hidden relative group-hover:border-primary/30 transition-all p-8 flex flex-col`}>
               <div className="w-full h-1 bg-white/10 rounded-full mb-4" />
               <div className="w-2/3 h-1 bg-white/5 rounded-full mb-8" />
-              <div className="flex-1 bg-black/20 rounded-2xl border border-white/5 p-4 overflow-hidden relative">
-                <div 
-                    dangerouslySetInnerHTML={{ __html: template.htmlContent }} 
-                    className="scale-50 origin-top pointer-events-none opacity-40 select-none"
+              <div className="flex-1 bg-black/20 rounded-2xl border border-white/5 overflow-hidden relative">
+                <iframe 
+                    srcDoc={template.htmlContent}
+                    className="w-[1200px] h-[1600px] border-0 scale-[0.2] origin-top-left pointer-events-none opacity-50 select-none bg-white"
+                    title={template.name}
                 />
               </div>
               

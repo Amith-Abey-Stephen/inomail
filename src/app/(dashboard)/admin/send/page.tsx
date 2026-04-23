@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, FileSpreadsheet, Send, Settings2, Code, Image as ImageIcon, CheckCircle2, ChevronRight, Copy, Loader2, Monitor, Smartphone, Tablet, ChevronLeft, Layout, Trash2, MousePointer2, Save, FileText } from "lucide-react";
+import { Sparkles, FileSpreadsheet, Send, Settings2, Code, Image as ImageIcon, CheckCircle2, ChevronRight, Copy, Loader2, Monitor, Smartphone, Tablet, ChevronLeft, Layout, Trash2, MousePointer2, Save, FileText, Download } from "lucide-react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
+import { useSearchParams } from "next/navigation";
 
 type Step = 1 | 2 | 3 | 4;
 
@@ -18,6 +20,10 @@ export default function SendEmailPage() {
   const [showCode, setShowCode] = useState(true);
   const [visualEditMode, setVisualEditMode] = useState(true);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [showSaveTemplateModal, setShowSaveTemplateModal] = useState(false);
+  const [showSaveDraftModal, setShowSaveDraftModal] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [recipients, setRecipients] = useState<any[]>([]);
   const [assets, setAssets] = useState<{ [key: string]: { url: string; name: string; loading: boolean } }>({
     "1": { url: "", name: "", loading: false },
     "2": { url: "", name: "", loading: false },
@@ -25,6 +31,9 @@ export default function SendEmailPage() {
   });
   
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const searchParams = useSearchParams();
+  const templateId = searchParams.get("templateId");
+  const draftId = searchParams.get("draftId");
 
   // Handle messages from the visual editor inside the iframe
   useEffect(() => {
@@ -36,6 +45,68 @@ export default function SendEmailPage() {
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, []);
+
+  // Load template or draft if ID is provided
+  useEffect(() => {
+    if (templateId) {
+        loadTemplate(templateId);
+    } else if (draftId) {
+        loadDraft(draftId);
+    }
+  }, [templateId, draftId]);
+
+  const loadTemplate = async (id: string) => {
+    const toastId = toast.loading("Loading template...");
+    try {
+        const res = await fetch(`/api/templates?id=${id}`);
+        const data = await res.json();
+        if (res.ok) {
+            setHtmlContent(data.template.htmlContent);
+            setPrompt(data.template.name);
+            setIsEditing(true);
+            toast.success("Template loaded!", { id: toastId });
+        } else {
+            toast.error("Failed to load template", { id: toastId });
+        }
+    } catch (err) {
+        toast.error("Something went wrong", { id: toastId });
+    }
+  };
+
+  const loadDraft = async (id: string) => {
+    const toastId = toast.loading("Resuming draft...");
+    try {
+        const res = await fetch(`/api/campaigns?id=${id}`);
+        const data = await res.json();
+        if (res.ok) {
+            setHtmlContent(data.campaign.htmlContent);
+            setPrompt(data.campaign.name);
+            setIsEditing(true);
+            
+            // Map assets if present
+            if (data.campaign.assets) {
+                const newAssets = { ...assets };
+                data.campaign.assets.forEach((group: any, idx: number) => {
+                    const key = (idx + 1).toString();
+                    if (newAssets[key] && group.files?.[0]) {
+                        newAssets[key] = {
+                            url: group.files[0].url,
+                            name: group.files[0].name || `Asset ${key}`,
+                            loading: false
+                        };
+                    }
+                });
+                setAssets(newAssets);
+            }
+
+            toast.success("Draft resumed!", { id: toastId });
+        } else {
+            toast.error("Failed to resume draft", { id: toastId });
+        }
+    } catch (err) {
+        toast.error("Something went wrong", { id: toastId });
+    }
+  };
 
   const handleGenerate = async () => {
     if (!prompt) return;
@@ -100,7 +171,7 @@ export default function SendEmailPage() {
     switch (previewDevice) {
       case "mobile": return "375px";
       case "tablet": return "768px";
-      case "desktop": return "1600px";
+      case "desktop": return "1200px";
       default: return "100%";
     }
   };
@@ -178,9 +249,8 @@ export default function SendEmailPage() {
   };
 
   const handleSaveTemplate = async () => {
-    const name = window.prompt("Enter a name for this template:", "New Template");
-    if (!name) return;
-
+    if (!saveName) return;
+    const name = saveName;
     const toastId = toast.loading("Saving as template...");
     try {
       const res = await fetch("/api/templates/save", {
@@ -191,6 +261,8 @@ export default function SendEmailPage() {
       const data = await res.json();
       if (res.ok) {
         toast.success("Design saved to Templates!", { id: toastId });
+        setShowSaveTemplateModal(false);
+        setSaveName("");
       } else {
         toast.error(data.error || "Failed to save template", { id: toastId });
       }
@@ -200,9 +272,8 @@ export default function SendEmailPage() {
   };
 
   const handleSaveDraft = async () => {
-    const name = window.prompt("Enter a name for this draft:", "New Campaign Draft");
-    if (!name) return;
-
+    if (!saveName) return;
+    const name = saveName;
     const toastId = toast.loading("Saving draft...");
     try {
       const res = await fetch("/api/campaigns/save-draft", {
@@ -222,13 +293,67 @@ export default function SendEmailPage() {
       if (res.ok) {
         toast.success("Draft saved successfully!", { id: toastId });
         setIsEditing(false);
+        setShowSaveDraftModal(false);
         setShowExitModal(false);
+        setSaveName("");
       } else {
         toast.error(data.error || "Failed to save draft", { id: toastId });
       }
     } catch (err) {
       toast.error("Failed to save draft", { id: toastId });
     }
+  };
+
+  const downloadTemplate = () => {
+    const headers = ["Name", "Email"];
+    // Add columns for all asset groups
+    Object.keys(assets).forEach(key => {
+        headers.push(`Asset ${key}`);
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet([headers]);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Recipients");
+    
+    XLSX.writeFile(workbook, "InoMail_Template.xlsx");
+    toast.success("Template downloaded! Fill it and upload.");
+  };
+
+  const handleExcelUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const bstr = evt.target?.result;
+        const wb = XLSX.read(bstr, { type: "binary" });
+        const wsname = wb.SheetNames[0];
+        const ws = wb.Sheets[wsname];
+        const data = XLSX.utils.sheet_to_json(ws);
+
+        if (data.length === 0) {
+            toast.error("The spreadsheet is empty.");
+            return;
+        }
+
+        // Basic validation
+        const firstRow: any = data[0];
+        const hasEmail = Object.keys(firstRow).some(k => k.toLowerCase() === "email");
+        const hasName = Object.keys(firstRow).some(k => k.toLowerCase() === "name");
+
+        if (!hasEmail || !hasName) {
+            toast.error("Columns 'Email' and 'Name' are required.");
+            return;
+        }
+
+        setRecipients(data);
+        toast.success(`Successfully imported ${data.length} recipients!`);
+      } catch (err) {
+        toast.error("Failed to parse Excel file.");
+      }
+    };
+    reader.readAsBinaryString(file);
   };
 
   const discardAndExit = () => {
@@ -270,7 +395,7 @@ export default function SendEmailPage() {
                     
                     <div className="space-y-3">
                         <button 
-                            onClick={handleSaveDraft}
+                            onClick={() => { setShowSaveDraftModal(true); setSaveName("New Draft"); }}
                             className="w-full bg-primary text-white font-black py-4 rounded-xl hover:bg-primary/90 transition-all shadow-lg"
                         >
                             Save Draft & Exit
@@ -370,7 +495,7 @@ export default function SendEmailPage() {
                 className="flex-1 flex flex-col lg:flex-row gap-6 overflow-hidden"
               >
                 {/* Left: Control Panel */}
-                <div className="w-full lg:w-[400px] flex flex-col gap-6">
+                <div className="w-full lg:w-[400px] flex flex-col gap-4 overflow-y-auto custom-scrollbar pr-1">
                     <div className="glass-card p-6 rounded-[2.5rem] border-white/10 bg-white/5 space-y-4">
                         <div className="flex items-center justify-between">
                             <span className="text-[10px] font-black text-primary uppercase tracking-widest">Generation Prompt</span>
@@ -390,7 +515,7 @@ export default function SendEmailPage() {
                         </button>
                     </div>
 
-                    <div className="glass-card p-6 rounded-[2.5rem] border-white/10 bg-white/5 flex-1 flex flex-col gap-6 shadow-xl">
+                    <div className="glass-card p-6 rounded-[2.5rem] border-white/10 bg-white/5 flex flex-col gap-4 shadow-xl">
                         <div className="space-y-4">
                             <span className="text-[10px] font-black text-gray-500 uppercase tracking-widest block">Preview Options</span>
                             <div className="flex bg-black/20 p-1 rounded-2xl border border-white/5">
@@ -423,26 +548,26 @@ export default function SendEmailPage() {
 
                         <div className="flex-1" />
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-2 gap-2">
                             <button 
                                 onClick={() => setVisualEditMode(!visualEditMode)}
-                                className={`flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs transition-all border ${visualEditMode ? 'bg-primary border-primary text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                                className={`flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-xs transition-all border ${visualEditMode ? 'bg-primary border-primary text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
                             >
                                 <MousePointer2 className="w-4 h-4" /> Visual Edit: {visualEditMode ? "ON" : "OFF"}
                             </button>
                             <button 
-                                onClick={handleSaveTemplate}
-                                className="flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 transition-all"
+                                onClick={() => { setShowSaveTemplateModal(true); setSaveName("New Template"); }}
+                                className="flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 transition-all"
                             >
                                 <Save className="w-4 h-4 text-primary" /> Save Template
                             </button>
                             <button 
                                 onClick={() => setShowCode(!showCode)}
-                                className={`flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs transition-all border ${showCode ? 'bg-white/10 border-white/20 text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
+                                className={`flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-xs transition-all border ${showCode ? 'bg-white/10 border-white/20 text-white shadow-lg' : 'bg-white/5 border-white/10 text-gray-400 hover:bg-white/10'}`}
                             >
                                 <Code className="w-4 h-4" /> {showCode ? "Hide Code" : "Show Code"}
                             </button>
-                            <button onClick={copyCode} className="flex items-center justify-center gap-2 py-4 rounded-2xl font-black text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 transition-all">
+                            <button onClick={copyCode} className="flex items-center justify-center gap-2 py-3 rounded-2xl font-black text-xs bg-white/5 border border-white/10 text-gray-400 hover:bg-white/10 transition-all">
                                 <Copy className="w-4 h-4" /> Copy HTML
                             </button>
                         </div>
@@ -492,11 +617,15 @@ export default function SendEmailPage() {
                     </AnimatePresence>
 
                     <div className="flex-1 glass-card border-white/10 bg-white rounded-[3.5rem] overflow-hidden relative shadow-2xl">
-                        <div className="absolute inset-0 bg-[#f8f9fa] overflow-auto custom-scrollbar flex items-start justify-center p-12">
+                        <div className="absolute inset-0 bg-[#f8f9fa] overflow-auto custom-scrollbar flex flex-col items-center p-12">
                              <motion.div 
                                 animate={{ width: getDeviceWidth() }}
                                 transition={{ type: "spring", stiffness: 200, damping: 25 }}
-                                style={{ scale: previewScale, transformOrigin: "top center" }}
+                                style={{ 
+                                    scale: previewScale, 
+                                    transformOrigin: "top center",
+                                    marginBottom: -( (1 - previewScale) * 100 ) + "%" // Offset the whitespace created by scaling
+                                }}
                                 className="min-h-full bg-white shadow-[0_40px_100px_rgba(0,0,0,0.1)] rounded-2xl overflow-hidden border border-gray-100 flex-shrink-0"
                             >
                                 <iframe 
@@ -574,18 +703,46 @@ export default function SendEmailPage() {
           >
               <div className="text-center max-w-2xl mx-auto">
                 <h2 className="text-3xl font-black text-white mb-4">Recipient Data</h2>
-                <p className="text-gray-400">Import your database using Excel.</p>
+                <p className="text-gray-400 mb-8">Import your database using Excel. We've prepared a template with the correct columns for your assets.</p>
+                
+                <div className="flex items-center justify-center gap-4 mb-10">
+                    <button 
+                        onClick={downloadTemplate}
+                        className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-black text-xs uppercase tracking-widest transition-colors bg-primary/10 px-6 py-3 rounded-xl border border-primary/20"
+                    >
+                        <Download className="w-4 h-4" /> Download Template
+                    </button>
+                    {recipients.length > 0 && (
+                        <div className="flex items-center gap-2 text-green-400 bg-green-500/10 px-4 py-2 rounded-xl border border-green-500/20 text-xs font-bold">
+                            <CheckCircle2 className="w-4 h-4" /> {recipients.length} Recipients Loaded
+                        </div>
+                    )}
+                </div>
               </div>
               
-              <div className="glass-card border-dashed border-white/10 bg-white/5 rounded-[3rem] p-20 flex flex-col items-center justify-center text-center hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group">
-                <div className="w-24 h-24 bg-primary/10 rounded-[2rem] flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
-                  <FileSpreadsheet className="w-12 h-12 text-primary" />
-                </div>
-                <h3 className="text-2xl font-black text-white mb-2">Select Spreadsheet</h3>
-                <p className="text-gray-400 mb-8 max-w-sm">Requires "Email" and "Name" columns.</p>
-                <button className="bg-primary text-white px-10 py-4 rounded-2xl font-black hover:bg-primary/90 transition-all shadow-2xl">
-                  Browse .xlsx Files
-                </button>
+              <div className="relative group">
+                <input 
+                    type="file" 
+                    id="excel-upload" 
+                    className="hidden" 
+                    accept=".xlsx, .xls, .csv"
+                    onChange={handleExcelUpload} 
+                />
+                <label 
+                    htmlFor="excel-upload"
+                    className="glass-card border-dashed border-white/10 bg-white/5 rounded-[3rem] p-20 flex flex-col items-center justify-center text-center hover:border-primary/50 hover:bg-primary/5 transition-all cursor-pointer group block"
+                >
+                    <div className="w-24 h-24 bg-primary/10 rounded-[2rem] flex items-center justify-center mb-8 group-hover:scale-110 transition-transform">
+                    {recipients.length > 0 ? <CheckCircle2 className="w-12 h-12 text-primary" /> : <FileSpreadsheet className="w-12 h-12 text-primary" />}
+                    </div>
+                    <h3 className="text-2xl font-black text-white mb-2">{recipients.length > 0 ? "Spreadsheet Loaded" : "Select Spreadsheet"}</h3>
+                    <p className="text-gray-400 mb-8 max-w-sm">
+                        {recipients.length > 0 ? "Click to replace the current list" : "Requires 'Email' and 'Name' columns."}
+                    </p>
+                    <div className="bg-primary text-white px-10 py-4 rounded-2xl font-black hover:bg-primary/90 transition-all shadow-2xl">
+                    {recipients.length > 0 ? "Replace File" : "Browse .xlsx Files"}
+                    </div>
+                </label>
               </div>
 
               <div className="flex justify-between items-center bg-white/5 p-6 rounded-[2rem] border border-white/10">
@@ -630,6 +787,118 @@ export default function SendEmailPage() {
               </div>
               <button onClick={prevStep} className="text-gray-500 font-bold hover:text-white transition-colors">Back to Setup</button>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Save Template Modal */}
+      <AnimatePresence>
+        {showSaveTemplateModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShowSaveTemplateModal(false)}
+                    className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                />
+                <motion.div 
+                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                    className="relative w-full max-w-md glass-card p-8 rounded-[2.5rem] border-white/10 bg-[#0c0c0e] shadow-2xl"
+                >
+                    <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mb-6">
+                        <Save className="w-8 h-8 text-primary" />
+                    </div>
+                    <h3 className="text-2xl font-black text-white mb-2">Save as Template</h3>
+                    <p className="text-gray-400 text-sm mb-8">Give your design a name to save it to your organization's library.</p>
+                    
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Template Name</label>
+                            <input 
+                                autoFocus
+                                type="text"
+                                value={saveName}
+                                onChange={(e) => setSaveName(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-4 text-white focus:border-primary/50 outline-none transition-all"
+                                placeholder="e.g. Winter Sale 2024"
+                            />
+                        </div>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setShowSaveTemplateModal(false)}
+                                className="flex-1 bg-white/5 border border-white/10 text-gray-400 font-bold py-4 rounded-xl hover:bg-white/10 transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={handleSaveTemplate}
+                                disabled={!saveName}
+                                className="flex-1 bg-primary text-white font-black py-4 rounded-xl hover:bg-primary/90 transition-all shadow-lg disabled:opacity-50"
+                            >
+                                Save Template
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
+        )}
+      </AnimatePresence>
+
+      {/* Save Draft Modal */}
+      <AnimatePresence>
+        {showSaveDraftModal && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                <motion.div 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    onClick={() => setShowSaveDraftModal(false)}
+                    className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                />
+                <motion.div 
+                    initial={{ scale: 0.9, opacity: 0, y: 20 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    exit={{ scale: 0.9, opacity: 0, y: 20 }}
+                    className="relative w-full max-w-md glass-card p-8 rounded-[2.5rem] border-white/10 bg-[#0c0c0e] shadow-2xl"
+                >
+                    <div className="w-16 h-16 bg-blue-500/10 rounded-2xl flex items-center justify-center mb-6">
+                        <FileText className="w-8 h-8 text-blue-500" />
+                    </div>
+                    <h3 className="text-2xl font-black text-white mb-2">Save Campaign Draft</h3>
+                    <p className="text-gray-400 text-sm mb-8">Saving this as a draft allows you to resume this exact state later.</p>
+                    
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-gray-500 uppercase tracking-widest px-1">Draft Name</label>
+                            <input 
+                                autoFocus
+                                type="text"
+                                value={saveName}
+                                onChange={(e) => setSaveName(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl py-4 px-4 text-white focus:border-primary/50 outline-none transition-all"
+                                placeholder="e.g. Untitled Campaign"
+                            />
+                        </div>
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setShowSaveDraftModal(false)}
+                                className="flex-1 bg-white/5 border border-white/10 text-gray-400 font-bold py-4 rounded-xl hover:bg-white/10 transition-all"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={handleSaveDraft}
+                                disabled={!saveName}
+                                className="flex-1 bg-blue-500 text-white font-black py-4 rounded-xl hover:bg-blue-600 transition-all shadow-lg disabled:opacity-50"
+                            >
+                                Save Draft
+                            </button>
+                        </div>
+                    </div>
+                </motion.div>
+            </div>
         )}
       </AnimatePresence>
     </div>

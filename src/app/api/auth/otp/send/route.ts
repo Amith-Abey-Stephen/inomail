@@ -20,7 +20,7 @@ export async function POST(req: Request) {
 
     // Send Email
     const { data, error } = await resend.emails.send({
-      from: "InoMail <onboarding@resend.dev>",
+      from: "InoMail <auth@amith.site>",
       to: email,
       subject: "Your Verification Code - InoMail",
       html: `

@@ -28,36 +28,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
     }
 
-    // 3. Construct Prompt
+    // 3. Construct Prompt with Atmospheric & Gradient Enforcement
     const structuredPrompt = `
-You are a world-class HTML email developer specializing in **Legacy Table-Based Layouts** for 100% alignment stability across all clients (Outlook, Gmail, Apple Mail).
-Create a stunning, high-end "WOW" factor email template using bulletproof email coding techniques.
+You are an elite Digital Designer for brands like Linear, Stripe, and Apple. 
+Create an "Atmospheric Premium" email template. 
 
-Aesthetic Categories (Choose one):
-- **Midnight Neon**: Deep #020617 bg, neon accents (#FBBF24, #10B981).
-- **Luxury Minimal**: White/light-gray bg, gold/copper accents, serif fonts.
-- **Modern Glass**: Layered transparent effects with soft borders.
-- **Vibrant Gradient**: Bold linear gradients for buttons/accents.
+STRICT AESTHETIC DIRECTIVES (CRITICAL):
+1. **NO PLAIN WHITE BACKGROUNDS**: Avoid pure #ffffff backgrounds for the main wrapper. 
+2. **Monochromatic Gradients**: Use sophisticated, single-hue gradients for the main background. 
+   - Example: Deep Indigo (#1e1b4b) to Midnight (#0f172a).
+   - Example: Soft Slate (#f1f5f9) to Pearl (#e2e8f0).
+3. **The "Glow" Effect**: Use inner-glows or subtle light-source effects in the corners of cards.
+4. **Card-Based Glassmorphism**: Place content on "Glass" cards:
+   - 'background: rgba(255,255,255,0.03);' for dark themes.
+   - 'background: rgba(255,255,255,0.8);' for light themes.
+   - 'backdrop-filter: blur(20px);' (with solid color fallbacks for Outlook).
+5. **High-End Typography**: 
+   - H1: Large, bold, 'letter-spacing: -0.04em;'.
+   - Use 'background-clip: text;' with a gradient if possible for headings.
+6. **Responsive Card**: 40px rounded corners, deep soft shadow (0 50px 100px rgba(0,0,0,0.2)).
 
-Technical Stability Requirements (CRITICAL):
-1. **Bulletproof Tables**: Use ONLY <table>, <tr>, and <td> for the core structure. Avoid <div> for layouts as they break alignment in Outlook.
-2. **Alignment Attributes**: Use 'align="center"' on tables and 'align="left/center/right"' on <td> cells. Use 'valign="top"' for vertical alignment.
-3. **Strict Inline CSS**: Every single element must have its styles applied via the 'style' attribute. DO NOT rely on internal <style> blocks for core layout or alignment.
-4. **Spacing**: Use 'cellpadding="0"' and 'cellspacing="0"'. Use <td> with specific padding or heights for spacing instead of margins (which are unreliable).
-5. **Fluid & Responsive**: 
-   - Main wrapper table: width="100%".
-   - Content container table: width="100%", style="max-width: 600px;".
-   - Images: style="display: block; width: 100%; height: auto; max-width: 100%;".
-   - Include: <meta name="viewport" content="width=device-width, initial-scale=1.0">.
+COLOR SYSTEMS (Mandatory - choose one):
+- **Obsidian Indigo**: Background: Linear gradient from #0c0c0e to #1e1b4b. Accents: #6366f1.
+- **Deep Emerald**: Background: Linear gradient from #064e3b to #022c22. Accents: #10b981.
+- **Silver Frost**: Background: Linear gradient from #f8fafc to #cbd5e1. Accents: #334155.
 
-Design Principles:
-- Use rounded corners (24px-32px) via 'border-radius' (with <td> fallbacks if possible).
-- Generous internal padding (40px+) inside content cells.
-- Premium typography hierarchy.
-- Content must NEVER be cutoff or misaligned.
+TECHNICAL REQUIREMENTS:
+- Fluid-Hybrid responsive structure (width="100%", max-width: 600px).
+- ALL styles must be inlined.
+- Use only <table> for layout.
+- Include Outlook XML and Viewport meta tags.
 
-Return ONLY raw HTML code (no markdown, no preambles).
-Variables: Naturally integrate {{variable_name}} for ${variables.length > 0 ? variables.map((v: string) => `{{${v}}}`).join(', ') : "None"}.
+Return ONLY the raw HTML code starting with <!DOCTYPE html>. Do not include markdown blocks.
+Variables: ${variables.length > 0 ? variables.map((v: string) => `{{${v}}}`).join(', ') : "None"}.
 Tone: ${tone}
 Prompt: "${prompt}"
 `;
@@ -74,10 +77,10 @@ Prompt: "${prompt}"
       body: JSON.stringify({
         model: "meta-llama/llama-3.3-70b-instruct",
         messages: [
-          { role: "system", content: "You are an expert HTML email developer. You produce clean, table-based, fully inlined HTML emails that look perfect in Outlook and Gmail." },
+          { role: "system", content: "You are a master of premium, atmospheric email design. You create immersive, high-end experiences using monochromatic gradients and glassmorphism." },
           { role: "user", content: structuredPrompt }
         ],
-        temperature: 0.7, // Lower temperature slightly for more consistent table structure
+        temperature: 0.6,
       }),
     });
 
